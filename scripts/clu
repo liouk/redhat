@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+
+set -e
+[ -n "$TRACE" ] && set -x
+
+# openshift-install
+ocp_base_url="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp"
+openshift_installer=
+ocp_version=
+
+# cluster
+cluster_name=
+[ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && cluster_name="${cluster_name}-$(date '+%H%M')"
+
+usage () {
+  cat <<EOF
+Manipulate openshift clusters.
+
+COMMANDS
+    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config]
+        Create a new cluster on AWS using openshift-install.
+
+    destroy [-v|--ocp-version <string>]
+        Select and destroy an existing cluster using openshift-install.
+
+    config
+        Choose a cluster configuration and export it to KUBECONFIG.
+
+    clean
+        Delete existing cluster configurations.
+
+    installer [-v|--ocp-version <string>]
+        Download the openshift-install binary.
+        Releases: $ocp_base_url
+
+    -h, --help, help, usage
+        Print this usage message.
+EOF
+}
+
+# verify aws login and show confirmation prompt
+aws_login () {
+  echo
+  echo "Checking AWS login info"
+  aws iam get-user
+  echo
+}
+
+# sign-in to 1password and store session
+op_signin() {
+  local op_session_file="$HOME/.config/op/.session-token"
+  OP_SESSION=$(cat $op_session_file 2>/dev/null)
+  op --session "$OP_SESSION" user list > /dev/null 2>&1 && return
+
+  OP_SESSION=$(op signin --account my --raw)
+  chmod 600 "$op_session_file"
+  echo -n "$OP_SESSION" > "$op_session_file"
+}
+
+# takes ~45min
+create_openshift_cluster () {
+  local interactive_config="$1"
+  local platform="aws"
+  local template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version}.yaml"
+
+  if [ -n "$interactive_config" ]; then
+    echo -e "Will create interactive install configuration\n"
+    $openshift_installer --dir="$OCP_CLUSTER_CONFIG_DIR/tmp-interactive" create install-config
+
+    cluster_name=$(grep -A2 metadata "$OCP_CLUSTER_CONFIG_DIR/tmp-interactive/install-config.yaml" | grep name | cut -d' ' -f4)
+    mv $OCP_CLUSTER_CONFIG_DIR/tmp-interactive $OCP_CLUSTER_CONFIG_DIR/$cluster_name
+    echo "moved temp dir '$OCP_CLUSTER_CONFIG_DIR/tmp-interactive' to '$OCP_CLUSTER_CONFIG_DIR/$cluster_name'"
+    cluster_path="$OCP_CLUSTER_CONFIG_DIR/$cluster_name"
+
+    create_cluster_config_template "$template_file" "$cluster_path/install-config.yaml" "$cluster_name"
+
+  elif [ -f "$template_file" ]; then
+    echo -e "Will use template:\n  $template_file\n"
+    local pull_secret=
+    if command -v op &> /dev/null; then
+      op_signin
+      pull_secret=$(op --session "$OP_SESSION" read "$OP_ITEM_OCP_PULL_SECRET")
+    else
+      echo -n "Pull secret:"
+      read -s pull_secret
+    fi
+
+    cluster_path="$OCP_CLUSTER_CONFIG_DIR/$cluster_name"
+    mkdir -p "$cluster_path"
+
+    local config_file="$cluster_path/install-config.yaml"
+    cp "$template_file" "$config_file"
+    sed -i "s/name: \$CLUSTER_NAME$/name: $cluster_name/" "$config_file"
+    sed -i "s/pullSecret: \$PULL_SECRET$/pullSecret: '$pull_secret'/" "$config_file"
+
+  else
+    echo "Error: no template found for $platform/$ocp_version; run script interactively to create one"
+    exit 1
+  fi
+
+  echo -e "\nCluster to be created"
+  echo -e "* Cluster name:\t$cluster_name"
+  echo -e "* OCP Version:\t $ocp_version"
+  echo -e "* Installer:\t$openshift_installer"
+  echo -e "* Config dir:\t$cluster_path\n"
+  read -p "Proceed? [yN] " yn
+  case $yn in
+    y|yes) ;;
+    *) echo "Aborting cluster creation" && exit 1;;
+  esac
+
+  # create cluster
+  echo "Will create cluster '$cluster_path'"
+  $openshift_installer --dir="$cluster_path" create cluster
+  echo "Cluster metadata stored in '$cluster_path'"
+
+  # create 1p entry with console credentials
+  echo "Will update 1p entry '$OP_ENTRY_OCP_CONSOLE' with URL and password"
+  op_signin
+  kubeadmin_password=$(cat "$cluster_path/auth/kubeadmin-password")
+  web_console_url=$(grep -o "https://console-openshift-console.*.openshift.com" "$cluster_path/.openshift_install.log")
+  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" password="$kubeadmin_password" > /dev/null
+  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" website="$web_console_url" > /dev/null
+  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" cluster="$cluster_name" > /dev/null
+
+  # use this kubeconfig
+  cluster_conf="${OCP_CLUSTER_CONFIG_DIR}/${cluster_name}/auth/kubeconfig"
+  export KUBECONFIG="$cluster_conf"
+  echo "export KUBECONFIG=$cluster_conf" > ~/.zsh/conf.d/ocp-cluster.zsh
+  oc status
+}
+
+# existing cluster configs
+load_cluster_configs () {
+  all_configs=()
+
+  # clusterbot configs
+  clusterbot_configs_dir="$HOME/Downloads"
+  clusterbot_config_regex=".*kubeconfig.*"
+  configs=( $(find "$clusterbot_configs_dir" -regex "$clusterbot_config_regex" 2>/dev/null) )
+  for c in "${configs[@]}"; do
+    [[ -z "${c// }" ]] || all_configs+=($c)
+  done
+
+  # openshift-install configs
+  configs=( $(find "$OCP_CLUSTER_CONFIG_DIR" -maxdepth 1 -regex "$OCP_CLUSTER_CONFIG_REGEX" 2>/dev/null) )
+  for c in "${configs[@]}"; do
+    [[ -z "${c// }" ]] || all_configs+=($c)
+  done
+
+  if [[ "${#all_configs[@]}" -eq "0" ]]; then
+    echo "No configs found in the following dirs:"
+    echo "    $clusterbot_configs_dir"
+    echo "    $OCP_CLUSTER_CONFIG_DIR"
+    exit
+  fi
+}
+
+# commands
+cmd_installer () {
+  local ocp_version_label="stable"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -v|--version)
+        ocp_version_label="$2"
+        shift
+        shift
+        ;;
+      *)
+        echo "Error: unknown argument '$1' for command 'installer'"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  local ocp_url="$ocp_base_url/$ocp_version_label"
+
+  ocp_version=$(curl -s "$ocp_url/release.txt")
+  if [[ "$ocp_version" != *"Name:"* ]]; then
+    echo "Error: version '$ocp_version_label' not found; please check available releases in $ocp_base_url"
+    exit 1
+  fi
+  ocp_version=$(echo "$ocp_version" | grep "^Name:" | tr -s ' ' | cut -d' ' -f2)
+
+  openshift_installer="${OCP_INSTALLER_DIR}/openshift-install-${ocp_version}"
+  if [ -f "$openshift_installer" ]; then
+    echo "OpenShift installer found; will not download"
+    $openshift_installer version
+    return
+  fi
+
+  curl "$ocp_url/openshift-install-linux.tar.gz" --output $OCP_INSTALLER_DIR/openshift-install.tar.gz
+  tar -xzf $OCP_INSTALLER_DIR/openshift-install.tar.gz -C $OCP_INSTALLER_DIR "openshift-install" --transform "s/openshift-install/openshift-install-$ocp_version/"
+  rm $OCP_INSTALLER_DIR/openshift-install.tar.gz
+}
+
+cmd_create () {
+  local arg_name=
+  local arg_version=
+  local arg_interactive_config=
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -n|--name)
+        arg_name="$2"
+        shift
+        shift
+        ;;
+      -v|--ocp-version)
+        arg_version="-v $2"
+        shift
+        shift
+        ;;
+      -i|--interactive-config)
+        arg_interactive_config=1
+        shift
+        ;;
+      *)
+        echo "Error: unknown argument '$1' for command 'create'"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  cmd_installer $arg_version
+
+  cluster_name="${RH_USERNAME}-v${ocp_version}-$(date '+%Y%m%d')"
+  [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && cluster_name="${cluster_name}-$(date '+%H%M')"
+
+  if [ -n "$arg_name" ]; then
+    [[ ${arg_name:0:1} == "-" ]] && cluster_name="${cluster_name}$arg_name" || cluster_name="$arg_name"
+  fi
+
+  if [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ]; then
+    echo "Cannot use name '$cluster_name' for cluster; dir already exists"
+    exit 1
+  fi
+
+  aws_login && create_openshift_cluster "$arg_interactive_config"
+}
+
+cmd_destroy () {
+  local arg_version=
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -v|--ocp-version)
+        arg_version="-v $2"
+        shift
+        shift
+        ;;
+      *)
+        echo "Error: unknown argument '$1' for command 'destroy'"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  cmd_installer $arg_version
+
+  read -p "Will destroy cluster '$KUBECONFIG'; ok? [yN] " yn
+  case $yn in
+    y|yes) $openshift_installer destroy cluster --dir ${KUBECONFIG%"/auth/kubeconfig"};;
+    *) echo "Aborting" && exit 1;;
+  esac
+}
+
+cmd_config () {
+  load_cluster_configs
+
+  echo "Current value:"
+  echo "KUBECONFIG=$KUBECONFIG"
+  echo
+  echo "Choose a cluster config:"
+  selected=$(gum choose --cursor.foreground "#FFA066" "${all_configs[@]}")
+  if [[ "$selected" == "" ]]; then
+    echo "No selection, bye"
+    exit 1
+  fi
+
+  if [[ "$selected" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/${RH_USERNAME}-"* ]]; then
+    selected="$selected/auth/kubeconfig"
+  fi
+
+  echo "> $selected"
+  echo "export KUBECONFIG=$selected" > "$OCP_CLUSTER_KUBECONFIG"
+  echo -e "Exported KUBECONFIG; run 'exec zsh' to load it"
+}
+
+cmd_clean () {
+  load_cluster_configs
+
+  echo "Choose which cluster configs to remove (hit space to select):"
+  export GUM_CHOOSE_CURSOR_PREFIX="[ ] "
+  export GUM_CHOOSE_UNSELECTED_PREFIX="[ ] "
+  export GUM_CHOOSE_SELECTED_PREFIX="[*] "
+  if [[ "${#all_configs[@]}" -eq "1" ]]; then
+    export GUM_CHOOSE_CURSOR_PREFIX="[*] "
+  fi
+
+  selected=$(gum choose \
+    --no-limit \
+    --cursor.foreground "#FFA066" \
+    --selected.foreground "#FFA066" \
+    "${all_configs[@]}")
+
+  if [[ "$selected" == "" ]]; then
+    echo "No selection, bye"
+    exit 1
+  fi
+
+  mkdir -p $OCP_CLUSTER_CONFIG_ARCHIVE_DIR
+  echo "$selected" | xargs -I {} mv {} "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR"
+  echo "Files moved to '$OCP_CLUSTER_CONFIG_ARCHIVE_DIR':"
+  echo "$selected"
+
+  # also delete archived cluster configs older than 14 days
+  find $OCP_CLUSTER_CONFIG_ARCHIVE_DIR/* -type d -ctime +14 -exec rm -rf {} \;
+}
+
+create_cluster_config_template () {
+  local template_file="$1"
+  local source_file="$2"
+  local cluster_name="$3"
+
+  if [ -f "$template_file" ]; then
+    echo "matching template already exists:"
+    echo "  $template_file"
+    return
+  fi
+
+  # create new template
+  mkdir -p $OCP_CLUSTER_CONFIG_TEMPLATES_DIR
+  cp $source_file $template_file
+  sed -i "s/name: $cluster_name$/name: \$CLUSTER_NAME/" $template_file
+  sed -i "s/pullSecret: .*$/pullSecret: \$PULL_SECRET/" $template_file
+  echo "created new template:"
+  echo "  $template_file"
+}
+
+main () {
+  cmd_name="$1"
+  shift || true
+  case "$cmd_name" in
+    create|destroy|config|clean|installer)
+      cmd_"$cmd_name" "$@"
+      ;;
+    "")
+      cmd_config
+      ;;
+    -h|--help|help|usage)
+      usage
+      ;;
+    *)
+      echo "Error: unknown command '$cmd_name'"
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+[ -z "$RH_USERNAME" ] && { echo "RH_USERNAME env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_CONFIG_DIR" ] && { echo "OCP_CLUSTER_CONFIG_DIR env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_CONFIG_DIRNAME" ] && { echo "OCP_CLUSTER_CONFIG_DIRNAME env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_CONFIG_TEMPLATES_DIR" ] && { echo "OCP_CLUSTER_CONFIG_TEMPLATES_DIR env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR" ] && { echo "OCP_CLUSTER_CONFIG_ARCHIVE_DIR env variable required but is not set"; exit 1; }
+[ -z "$OCP_INSTALLER_DIR" ] && { echo "OCP_INSTALLER_DIR env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_CONFIG_REGEX" ] && { echo "OCP_CLUSTER_CONFIG_REGEX env variable required but is not set"; exit 1; }
+[ -z "$OCP_CLUSTER_KUBECONFIG" ] && { echo "OCP_CLUSTER_KUBECONFIG env variable required but is not set"; exit 1; }
+[ -z "$OP_ITEM_OCP_PULL_SECRET" ] && { echo "OP_ITEM_OCP_PULL_SECRET env variable required but is not set"; exit 1; }
+[ -z "$OP_ITEM_OCP_CONSOLE" ] && { echo "OP_ITEM_OCP_CONSOLE env variable required but is not set"; exit 1; }
+[ -z "$OP_VAULT_OCP" ] && { echo "OP_VAULT_OCP env variable required but is not set"; exit 1; }
+[ -z "$OP_ENTRY_OCP_CONSOLE" ] && { echo "OP_ENTRY_OCP_CONSOLE env variable required but is not set"; exit 1; }
+
+main "$@"

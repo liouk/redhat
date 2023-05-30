@@ -1,0 +1,29 @@
+### first admission (call to sccadmission.Admit()) with system:admin
+# pod admitted with anyuid
+
+I0508 14:18:47.542526      17 admission.go:173] getting security context constraints for pod badpod (generate: ) in namespace test with user info &{system:admin  [system:masters system:authenticated] map[]}
+I0508 14:18:47.544222      17 admission.go:479] validating pod badpod (generate: ) against providers anyuid,restricted-v2,restricted,nonroot-v2,nonroot,hostmount-anyuid,machine-api-termination-handler,hostnetwork-v2,hostnetwork,hostaccess,node-exporter,privileged
+I0508 14:18:47.544263      17 admission.go:313] pod badpod (generate: ) validated against provider anyuid with mutation
+I0508 14:18:47.544298      17 admission.go:102] pod badpod (generate: ) validated against provider anyuid
+I0508 14:18:47.545432      17 admission.go:470] "PodSecurity evaluation" policy="{privileged:latest restricted:v1.24 restricted:v1.24}" op=CREATE resource="/v1, Resource=pods" namespace="test" name="badpod"
+
+# this is a validation that follows the admission (call to sccadmission.Validate()) with system:admin
+
+I0508 14:18:47.552321      17 admission.go:173] getting security context constraints for pod badpod (generate: ) in namespace test with user info &{system:admin  [system:masters system:authenticated] map[]}
+I0508 14:18:47.554061      17 admission.go:479] validating pod badpod (generate: ) against providers anyuid,restricted-v2,restricted,nonroot-v2,nonroot,hostmount-anyuid,machine-api-termination-handler,hostnetwork-v2,hostnetwork,hostaccess,node-exporter,privileged
+I0508 14:18:47.554179      17 admission.go:319] pod badpod (generate: ) validated against provider anyuid without mutation
+
+### second admission (system:serviceaccount:openshift-ovn-kubernetes:ovn-kubernetes-controller)
+# pod admitted with privileged
+
+I0508 14:18:47.566265      15 admission.go:173] getting security context constraints for pod badpod (generate: ) in namespace test with user info &{system:serviceaccount:openshift-ovn-kubernetes:ovn-kubernetes-controller 53869c39-5087-4e35-9eb5-3f601b361fda [system:serviceaccounts system:serviceaccounts:openshift-ovn-kubernetes system:authenticated] map[authentication.kubernetes.io/pod-name:[ovnkube-master-pm98m] authentication.kubernetes.io/pod-uid:[3d34bd39-fdf2-4d06-8b67-df798d4524c7]]}
+I0508 14:18:47.572032      15 admission.go:479] validating pod badpod (generate: ) against providers anyuid,restricted-v2,restricted,nonroot-v2,nonroot,hostmount-anyuid,machine-api-termination-handler,hostnetwork-v2,hostnetwork,hostaccess,node-exporter,privileged
+I0508 14:18:47.572741      15 admission.go:322] pod badpod (generate: ) validated against provider restricted-v2, but required mutation, skipping
+I0508 14:18:47.574039      15 admission.go:319] pod badpod (generate: ) validated against provider privileged without mutation
+I0508 14:18:47.574065      15 admission.go:102] pod badpod (generate: ) validated against provider privileged
+
+# validation that follows the admission
+
+I0508 14:18:47.574559      15 admission.go:173] getting security context constraints for pod badpod (generate: ) in namespace test with user info &{system:serviceaccount:openshift-ovn-kubernetes:ovn-kubernetes-controller 53869c39-5087-4e35-9eb5-3f601b361fda [system:serviceaccounts system:serviceaccounts:openshift-ovn-kubernetes system:authenticated] map[authentication.kubernetes.io/pod-name:[ovnkube-master-pm98m] authentication.kubernetes.io/pod-uid:[3d34bd39-fdf2-4d06-8b67-df798d4524c7]]}
+I0508 14:18:47.578435      15 admission.go:479] validating pod badpod (generate: ) against providers privileged,anyuid,restricted-v2,restricted,nonroot-v2,nonroot,hostmount-anyuid,machine-api-termination-handler,hostnetwork-v2,hostnetwork,hostaccess,node-exporter
+I0508 14:18:47.578642      15 admission.go:319] pod badpod (generate: ) validated against provider privileged without mutation

@@ -1,0 +1,3475 @@
+[
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "aa21e93f-6dbf-4b24-ba2b-ef67affda6c8",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods",
+    "verb": "deletecollection",
+    "user": {
+      "username": "system:serviceaccount:kube-system:namespace-controller",
+      "uid": "d92bda62-5197-4061-91c1-0e3f677edef9",
+      "groups": [
+        "system:serviceaccounts",
+        "system:serviceaccounts:kube-system",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kube-controller-manager/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9/system:serviceaccount:kube-system:namespace-controller",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "DeleteOptions",
+      "apiVersion": "meta.k8s.io/__internal",
+      "propagationPolicy": "Background"
+    },
+    "responseObject": {
+      "kind": "PodList",
+      "apiVersion": "v1",
+      "metadata": {
+        "resourceVersion": "669103"
+      },
+      "items": [
+        {
+          "metadata": {
+            "name": "badpod",
+            "namespace": "test",
+            "uid": "8c903882-d358-48d3-b350-8e87dd79cd51",
+            "resourceVersion": "655468",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.41/23\"],\"mac_address\":\"0a:58:0a:81:02:29\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.41/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "privileged"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-7skxx",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-7skxx",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "MKNOD"
+                    ]
+                  }
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.41",
+            "podIPs": [
+              {
+                "ip": "10.129.2.41"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        },
+        {
+          "metadata": {
+            "name": "goodpod",
+            "namespace": "test",
+            "uid": "04d50fdc-e01d-4a69-b470-54c1304b2200",
+            "resourceVersion": "655467",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.42/23\"],\"mac_address\":\"0a:58:0a:81:02:2a\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.42/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "restricted-v2",
+              "seccomp.security.alpha.kubernetes.io/pod": "runtime/default"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-wq8tk",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-wq8tk",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  },
+                  "runAsUser": 1000710000,
+                  "allowPrivilegeEscalation": false
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              },
+              "runAsNonRoot": true,
+              "fsGroup": 1000710000,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.42",
+            "podIPs": [
+              {
+                "ip": "10.129.2.42"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://cde9afbeb1f9d3aacdef62df65e377d001b7e06756911cc33ec8a6fe85a4c11a",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        }
+      ]
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:38:29.961381Z",
+    "stageTimestamp": "2023-05-05T13:38:29.983968Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:controller:namespace-controller\" of ClusterRole \"system:controller:namespace-controller\" to ServiceAccount \"namespace-controller/kube-system\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "c60f7720-eed5-4915-8a5b-84506fb2dfea",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods",
+    "verb": "deletecollection",
+    "user": {
+      "username": "system:serviceaccount:kube-system:namespace-controller",
+      "uid": "d92bda62-5197-4061-91c1-0e3f677edef9",
+      "groups": [
+        "system:serviceaccounts",
+        "system:serviceaccounts:kube-system",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kube-controller-manager/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9/system:serviceaccount:kube-system:namespace-controller",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "DeleteOptions",
+      "apiVersion": "meta.k8s.io/__internal",
+      "propagationPolicy": "Background"
+    },
+    "responseObject": {
+      "kind": "PodList",
+      "apiVersion": "v1",
+      "metadata": {
+        "resourceVersion": "669172"
+      },
+      "items": [
+        {
+          "metadata": {
+            "name": "badpod",
+            "namespace": "test",
+            "uid": "8c903882-d358-48d3-b350-8e87dd79cd51",
+            "resourceVersion": "669104",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "deletionTimestamp": "2023-05-05T13:38:59Z",
+            "deletionGracePeriodSeconds": 30,
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.41/23\"],\"mac_address\":\"0a:58:0a:81:02:29\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.41/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "privileged"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-7skxx",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-7skxx",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "MKNOD"
+                    ]
+                  }
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.41",
+            "podIPs": [
+              {
+                "ip": "10.129.2.41"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        },
+        {
+          "metadata": {
+            "name": "goodpod",
+            "namespace": "test",
+            "uid": "04d50fdc-e01d-4a69-b470-54c1304b2200",
+            "resourceVersion": "669106",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "deletionTimestamp": "2023-05-05T13:38:59Z",
+            "deletionGracePeriodSeconds": 30,
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.42/23\"],\"mac_address\":\"0a:58:0a:81:02:2a\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.42/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "restricted-v2",
+              "seccomp.security.alpha.kubernetes.io/pod": "runtime/default"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-wq8tk",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-wq8tk",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  },
+                  "runAsUser": 1000710000,
+                  "allowPrivilegeEscalation": false
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              },
+              "runAsNonRoot": true,
+              "fsGroup": 1000710000,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.42",
+            "podIPs": [
+              {
+                "ip": "10.129.2.42"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://cde9afbeb1f9d3aacdef62df65e377d001b7e06756911cc33ec8a6fe85a4c11a",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        }
+      ]
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:38:36.346137Z",
+    "stageTimestamp": "2023-05-05T13:38:36.356347Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:controller:namespace-controller\" of ClusterRole \"system:controller:namespace-controller\" to ServiceAccount \"namespace-controller/kube-system\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "3f65a34d-07b0-4722-b71c-a9880e009085",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods",
+    "verb": "deletecollection",
+    "user": {
+      "username": "system:serviceaccount:kube-system:namespace-controller",
+      "uid": "d92bda62-5197-4061-91c1-0e3f677edef9",
+      "groups": [
+        "system:serviceaccounts",
+        "system:serviceaccounts:kube-system",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kube-controller-manager/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9/system:serviceaccount:kube-system:namespace-controller",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "DeleteOptions",
+      "apiVersion": "meta.k8s.io/__internal",
+      "propagationPolicy": "Background"
+    },
+    "responseObject": {
+      "kind": "PodList",
+      "apiVersion": "v1",
+      "metadata": {
+        "resourceVersion": "669283"
+      },
+      "items": [
+        {
+          "metadata": {
+            "name": "badpod",
+            "namespace": "test",
+            "uid": "8c903882-d358-48d3-b350-8e87dd79cd51",
+            "resourceVersion": "669104",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "deletionTimestamp": "2023-05-05T13:38:59Z",
+            "deletionGracePeriodSeconds": 30,
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.41/23\"],\"mac_address\":\"0a:58:0a:81:02:29\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.41/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "privileged"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-7skxx",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-7skxx",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "MKNOD"
+                    ]
+                  }
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.41",
+            "podIPs": [
+              {
+                "ip": "10.129.2.41"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        },
+        {
+          "metadata": {
+            "name": "goodpod",
+            "namespace": "test",
+            "uid": "04d50fdc-e01d-4a69-b470-54c1304b2200",
+            "resourceVersion": "669106",
+            "creationTimestamp": "2023-05-05T13:04:15Z",
+            "deletionTimestamp": "2023-05-05T13:38:59Z",
+            "deletionGracePeriodSeconds": 30,
+            "annotations": {
+              "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.42/23\"],\"mac_address\":\"0a:58:0a:81:02:2a\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.42/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+              "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.42\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2a\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+              "openshift.io/scc": "restricted-v2",
+              "seccomp.security.alpha.kubernetes.io/pod": "runtime/default"
+            }
+          },
+          "spec": {
+            "volumes": [
+              {
+                "name": "kube-api-access-wq8tk",
+                "projected": {
+                  "sources": [
+                    {
+                      "serviceAccountToken": {
+                        "expirationSeconds": 3607,
+                        "path": "token"
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "kube-root-ca.crt",
+                        "items": [
+                          {
+                            "key": "ca.crt",
+                            "path": "ca.crt"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "downwardAPI": {
+                        "items": [
+                          {
+                            "path": "namespace",
+                            "fieldRef": {
+                              "apiVersion": "v1",
+                              "fieldPath": "metadata.namespace"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "configMap": {
+                        "name": "openshift-service-ca.crt",
+                        "items": [
+                          {
+                            "key": "service-ca.crt",
+                            "path": "service-ca.crt"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "defaultMode": 420
+                }
+              }
+            ],
+            "containers": [
+              {
+                "name": "fedora",
+                "image": "fedora:latest",
+                "command": [
+                  "sleep"
+                ],
+                "args": [
+                  "infinity"
+                ],
+                "resources": {},
+                "volumeMounts": [
+                  {
+                    "name": "kube-api-access-wq8tk",
+                    "readOnly": true,
+                    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                  }
+                ],
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "imagePullPolicy": "Always",
+                "securityContext": {
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  },
+                  "runAsUser": 1000710000,
+                  "allowPrivilegeEscalation": false
+                }
+              }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "default",
+            "serviceAccount": "default",
+            "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+            "securityContext": {
+              "seLinuxOptions": {
+                "level": "s0:c27,c4"
+              },
+              "runAsNonRoot": true,
+              "fsGroup": 1000710000,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "imagePullSecrets": [
+              {
+                "name": "default-dockercfg-7l6vk"
+              }
+            ],
+            "schedulerName": "default-scheduler",
+            "tolerations": [
+              {
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              },
+              {
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "effect": "NoExecute",
+                "tolerationSeconds": 300
+              }
+            ],
+            "priority": 0,
+            "enableServiceLinks": true,
+            "preemptionPolicy": "PreemptLowerPriority"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {
+                "type": "Initialized",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              },
+              {
+                "type": "Ready",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "ContainersReady",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:17Z"
+              },
+              {
+                "type": "PodScheduled",
+                "status": "True",
+                "lastProbeTime": null,
+                "lastTransitionTime": "2023-05-05T13:04:15Z"
+              }
+            ],
+            "hostIP": "10.0.144.132",
+            "podIP": "10.129.2.42",
+            "podIPs": [
+              {
+                "ip": "10.129.2.42"
+              }
+            ],
+            "startTime": "2023-05-05T13:04:15Z",
+            "containerStatuses": [
+              {
+                "name": "fedora",
+                "state": {
+                  "running": {
+                    "startedAt": "2023-05-05T13:04:17Z"
+                  }
+                },
+                "lastState": {},
+                "ready": true,
+                "restartCount": 0,
+                "image": "registry.fedoraproject.org/fedora:latest",
+                "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+                "containerID": "cri-o://cde9afbeb1f9d3aacdef62df65e377d001b7e06756911cc33ec8a6fe85a4c11a",
+                "started": true
+              }
+            ],
+            "qosClass": "BestEffort"
+          }
+        }
+      ]
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:38:53.529490Z",
+    "stageTimestamp": "2023-05-05T13:38:53.538694Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:controller:namespace-controller\" of ClusterRole \"system:controller:namespace-controller\" to ServiceAccount \"namespace-controller/kube-system\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "5282ef1b-1251-411b-a2ef-bd343fe9641f",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod/status",
+    "verb": "patch",
+    "user": {
+      "username": "system:node:ip-10-0-144-132.us-west-1.compute.internal",
+      "groups": [
+        "system:nodes",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kubelet/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1",
+      "subresource": "status"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "metadata": {
+        "uid": "8c903882-d358-48d3-b350-8e87dd79cd51"
+      },
+      "status": {
+        "$setElementOrder/conditions": [
+          {
+            "type": "Initialized"
+          },
+          {
+            "type": "Ready"
+          },
+          {
+            "type": "ContainersReady"
+          },
+          {
+            "type": "PodScheduled"
+          }
+        ],
+        "conditions": [
+          {
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed",
+            "status": "False",
+            "type": "ContainersReady"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+            "image": "registry.fedoraproject.org/fedora:latest",
+            "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+            "lastState": {},
+            "name": "fedora",
+            "ready": false,
+            "restartCount": 0,
+            "started": false,
+            "state": {
+              "terminated": {
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+                "exitCode": 137,
+                "finishedAt": "2023-05-05T13:39:00Z",
+                "reason": "Error",
+                "startedAt": "2023-05-05T13:04:17Z"
+              }
+            }
+          }
+        ],
+        "phase": "Failed"
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "8c903882-d358-48d3-b350-8e87dd79cd51",
+        "resourceVersion": "669330",
+        "creationTimestamp": "2023-05-05T13:04:15Z",
+        "deletionTimestamp": "2023-05-05T13:38:59Z",
+        "deletionGracePeriodSeconds": 30,
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.41/23\"],\"mac_address\":\"0a:58:0a:81:02:29\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.41/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-7skxx",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-7skxx",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c4"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-7l6vk"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Failed",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:04:15Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:04:15Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "podIP": "10.129.2.41",
+        "podIPs": [
+          {
+            "ip": "10.129.2.41"
+          }
+        ],
+        "startTime": "2023-05-05T13:04:15Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "Error",
+                "startedAt": "2023-05-05T13:04:17Z",
+                "finishedAt": "2023-05-05T13:39:00Z",
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac"
+              }
+            },
+            "lastState": {},
+            "ready": false,
+            "restartCount": 0,
+            "image": "registry.fedoraproject.org/fedora:latest",
+            "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+            "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+            "started": false
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:00.796580Z",
+    "stageTimestamp": "2023-05-05T13:39:00.821853Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": ""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "86fc463f-7bc7-4737-8ea2-4691236dd153",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod",
+    "verb": "delete",
+    "user": {
+      "username": "system:node:ip-10-0-144-132.us-west-1.compute.internal",
+      "groups": [
+        "system:nodes",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kubelet/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "DeleteOptions",
+      "apiVersion": "meta.k8s.io/__internal",
+      "gracePeriodSeconds": 0,
+      "preconditions": {
+        "uid": "8c903882-d358-48d3-b350-8e87dd79cd51"
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "8c903882-d358-48d3-b350-8e87dd79cd51",
+        "resourceVersion": "669331",
+        "creationTimestamp": "2023-05-05T13:04:15Z",
+        "deletionTimestamp": "2023-05-05T13:38:29Z",
+        "deletionGracePeriodSeconds": 0,
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.41/23\"],\"mac_address\":\"0a:58:0a:81:02:29\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.41/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.41\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:29\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-7skxx",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-7skxx",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c4"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-7l6vk"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Failed",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:04:15Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:00Z",
+            "reason": "PodFailed"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:04:15Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "podIP": "10.129.2.41",
+        "podIPs": [
+          {
+            "ip": "10.129.2.41"
+          }
+        ],
+        "startTime": "2023-05-05T13:04:15Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "Error",
+                "startedAt": "2023-05-05T13:04:17Z",
+                "finishedAt": "2023-05-05T13:39:00Z",
+                "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac"
+              }
+            },
+            "lastState": {},
+            "ready": false,
+            "restartCount": 0,
+            "image": "registry.fedoraproject.org/fedora:latest",
+            "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+            "containerID": "cri-o://09c71a8dcdb1a2c63c3000f40df582b6bbb90215a9ac65f9c54e133f7087fbac",
+            "started": false
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:00.825160Z",
+    "stageTimestamp": "2023-05-05T13:39:00.878314Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": ""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "e52f9b33-0df9-4dc1-bcc2-1c0f82f5be0a",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods?fieldManager=kubectl-create&fieldValidation=Ignore",
+    "verb": "create",
+    "user": {
+      "username": "system:admin",
+      "groups": [
+        "system:masters",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.82.182"
+    ],
+    "userAgent": "oc/4.12.0 (linux/amd64) kubernetes/b05f7d4",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 201
+    },
+    "requestObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always"
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "securityContext": {},
+        "schedulerName": "default-scheduler",
+        "enableServiceLinks": true
+      },
+      "status": {}
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669440",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "openshift.io/scc": "anyuid"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Pending",
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:11.810626Z",
+    "stageTimestamp": "2023-05-05T13:39:11.853162Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "",
+      "mutation.webhook.admission.k8s.io/round_0_index_2": "{\"configuration\":\"pod-identity-webhook\",\"webhook\":\"pod-identity-webhook.amazonaws.com\",\"mutated\":false}",
+      "pod-security.kubernetes.io/audit-violations": "would violate PodSecurity \"restricted:v1.24\": allowPrivilegeEscalation != false (container \"fedora\" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container \"fedora\" must set securityContext.capabilities.drop=[\"ALL\"]), runAsNonRoot != true (pod or container \"fedora\" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container \"fedora\" must set securityContext.seccompProfile.type to \"RuntimeDefault\" or \"Localhost\")",
+      "pod-security.kubernetes.io/enforce-policy": "privileged:latest",
+      "securitycontextconstraints.admission.openshift.io/chosen": "anyuid",
+      "securitycontextconstraints.admission.openshift.io/reason": "\"anyuid\" is most restrictive, not denied, and chosen over \"restricted-v2\" because \"anyuid\" has higher priority",
+      "securityserviceconstraints.admission.openshift.io/denied": ""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "20667612-a918-4d71-a3c5-49f2c447efba",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod/binding",
+    "verb": "create",
+    "user": {
+      "username": "system:kube-scheduler",
+      "groups": [
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kube-scheduler/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9/scheduler",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+      "apiVersion": "v1",
+      "subresource": "binding"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "status": "Success",
+      "code": 201
+    },
+    "requestObject": {
+      "kind": "Binding",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "creationTimestamp": null
+      },
+      "target": {
+        "kind": "Node",
+        "name": "ip-10-0-144-132.us-west-1.compute.internal"
+      }
+    },
+    "responseObject": {
+      "kind": "Status",
+      "apiVersion": "v1",
+      "metadata": {},
+      "status": "Success",
+      "code": 201
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:11.855039Z",
+    "stageTimestamp": "2023-05-05T13:39:11.863079Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-scheduler\" of ClusterRole \"system:kube-scheduler\" to User \"system:kube-scheduler\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "e77ddcd2-9da7-40b0-ab04-b301ce3cb8e6",
+    "stage": "ResponseComplete",
+    "requestURI": "/apis/events.k8s.io/v1/namespaces/test/events",
+    "verb": "create",
+    "user": {
+      "username": "system:kube-scheduler",
+      "groups": [
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kube-scheduler/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9/scheduler",
+    "objectRef": {
+      "resource": "events",
+      "namespace": "test",
+      "name": "badpod.175c42ee45678a75",
+      "apiGroup": "events.k8s.io",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 201
+    },
+    "requestObject": {
+      "kind": "Event",
+      "apiVersion": "events.k8s.io/v1",
+      "metadata": {
+        "name": "badpod.175c42ee45678a75",
+        "namespace": "test",
+        "creationTimestamp": null
+      },
+      "eventTime": "2023-05-05T13:39:11.863777Z",
+      "reportingController": "default-scheduler",
+      "reportingInstance": "default-scheduler-ip-10-0-228-145",
+      "action": "Binding",
+      "reason": "Scheduled",
+      "regarding": {
+        "kind": "Pod",
+        "namespace": "test",
+        "name": "badpod",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "apiVersion": "v1",
+        "resourceVersion": "669440"
+      },
+      "note": "Successfully assigned test/badpod to ip-10-0-144-132.us-west-1.compute.internal",
+      "type": "Normal",
+      "deprecatedSource": {},
+      "deprecatedFirstTimestamp": null,
+      "deprecatedLastTimestamp": null
+    },
+    "responseObject": {
+      "kind": "Event",
+      "apiVersion": "events.k8s.io/v1",
+      "metadata": {
+        "name": "badpod.175c42ee45678a75",
+        "namespace": "test",
+        "uid": "096d87a6-a74f-482b-a72e-9e0942190737",
+        "resourceVersion": "669442",
+        "creationTimestamp": "2023-05-05T13:39:11Z"
+      },
+      "eventTime": "2023-05-05T13:39:11.863777Z",
+      "reportingController": "default-scheduler",
+      "reportingInstance": "default-scheduler-ip-10-0-228-145",
+      "action": "Binding",
+      "reason": "Scheduled",
+      "regarding": {
+        "kind": "Pod",
+        "namespace": "test",
+        "name": "badpod",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "apiVersion": "v1",
+        "resourceVersion": "669440"
+      },
+      "note": "Successfully assigned test/badpod to ip-10-0-144-132.us-west-1.compute.internal",
+      "type": "Normal",
+      "deprecatedSource": {},
+      "deprecatedFirstTimestamp": null,
+      "deprecatedLastTimestamp": null
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:11.864328Z",
+    "stageTimestamp": "2023-05-05T13:39:11.874470Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-scheduler\" of ClusterRole \"system:kube-scheduler\" to User \"system:kube-scheduler\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "dbea3cf1-2172-4812-8c46-1c7891f306cc",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod",
+    "verb": "patch",
+    "user": {
+      "username": "system:serviceaccount:openshift-ovn-kubernetes:ovn-kubernetes-controller",
+      "uid": "bfda7f8c-c718-470f-94fa-3c359dc5d808",
+      "groups": [
+        "system:serviceaccounts",
+        "system:serviceaccounts:openshift-ovn-kubernetes",
+        "system:authenticated"
+      ],
+      "extra": {
+        "authentication.kubernetes.io/pod-name": [
+          "ovnkube-master-mm4m7"
+        ],
+        "authentication.kubernetes.io/pod-uid": [
+          "a7115ecf-b549-4e28-bda8-94ed799c23cb"
+        ]
+      }
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "ip-10-0-228-145/ovnkube@59117afc017c (linux/amd64) kubernetes/",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "metadata": {
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}"
+        }
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669443",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Pending",
+        "conditions": [
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:11.864383Z",
+    "stageTimestamp": "2023-05-05T13:39:11.879463Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"openshift-ovn-kubernetes-controller\" of ClusterRole \"openshift-ovn-kubernetes-controller\" to ServiceAccount \"ovn-kubernetes-controller/openshift-ovn-kubernetes\"",
+      "securitycontextconstraints.admission.openshift.io/chosen": "privileged"
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "4b96987e-901e-4340-9179-aaa171d8d8f3",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod/status",
+    "verb": "patch",
+    "user": {
+      "username": "system:node:ip-10-0-144-132.us-west-1.compute.internal",
+      "groups": [
+        "system:nodes",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kubelet/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1",
+      "subresource": "status"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "metadata": {
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587"
+      },
+      "status": {
+        "$setElementOrder/conditions": [
+          {
+            "type": "Initialized"
+          },
+          {
+            "type": "Ready"
+          },
+          {
+            "type": "ContainersReady"
+          },
+          {
+            "type": "PodScheduled"
+          }
+        ],
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "message": "containers with unready status: [fedora]",
+            "reason": "ContainersNotReady",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "message": "containers with unready status: [fedora]",
+            "reason": "ContainersNotReady",
+            "status": "False",
+            "type": "ContainersReady"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "fedora:latest",
+            "imageID": "",
+            "lastState": {},
+            "name": "fedora",
+            "ready": false,
+            "restartCount": 0,
+            "started": false,
+            "state": {
+              "waiting": {
+                "reason": "ContainerCreating"
+              }
+            }
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "startTime": "2023-05-05T13:39:11Z"
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669444",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Pending",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "startTime": "2023-05-05T13:39:11Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "waiting": {
+                "reason": "ContainerCreating"
+              }
+            },
+            "lastState": {},
+            "ready": false,
+            "restartCount": 0,
+            "image": "fedora:latest",
+            "imageID": "",
+            "started": false
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:11.876029Z",
+    "stageTimestamp": "2023-05-05T13:39:11.889260Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": ""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "a005bbb0-06e2-4c1a-96d6-10bd39f614a6",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/serviceaccounts/default/token",
+    "verb": "create",
+    "user": {
+      "username": "system:node:ip-10-0-144-132.us-west-1.compute.internal",
+      "groups": [
+        "system:nodes",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kubelet/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9",
+    "objectRef": {
+      "resource": "serviceaccounts",
+      "namespace": "test",
+      "name": "default",
+      "apiVersion": "v1",
+      "subresource": "token"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 201
+    },
+    "requestObject": {
+      "kind": "TokenRequest",
+      "apiVersion": "authentication.k8s.io/v1",
+      "metadata": {
+        "creationTimestamp": null
+      },
+      "spec": {
+        "audiences": null,
+        "expirationSeconds": 3607,
+        "boundObjectRef": {
+          "kind": "Pod",
+          "apiVersion": "v1",
+          "name": "badpod",
+          "uid": "e0984160-3548-4287-b0a8-9737744f4587"
+        }
+      },
+      "status": {
+        "token": "",
+        "expirationTimestamp": null
+      }
+    },
+    "responseObject": {
+      "kind": "TokenRequest",
+      "apiVersion": "authentication.k8s.io/v1",
+      "metadata": {
+        "name": "default",
+        "namespace": "test",
+        "creationTimestamp": "2023-05-05T13:39:12Z"
+      },
+      "spec": {
+        "audiences": [
+          "https://kubernetes.default.svc"
+        ],
+        "expirationSeconds": 3607,
+        "boundObjectRef": {
+          "kind": "Pod",
+          "apiVersion": "v1",
+          "name": "badpod",
+          "uid": "e0984160-3548-4287-b0a8-9737744f4587"
+        }
+      },
+      "status": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ik44U2g1VHBuVVJsc0Fudm01cXZadXE1djgyRHVVdlFBSnp5TWFaSFZ6eHcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjIl0sImV4cCI6MTcxNDgyOTk1MiwiaWF0IjoxNjgzMjkzOTUyLCJpc3MiOiJodHRwczovL2t1YmVybmV0ZXMuZGVmYXVsdC5zdmMiLCJrdWJlcm5ldGVzLmlvIjp7Im5hbWVzcGFjZSI6InRlc3QiLCJwb2QiOnsibmFtZSI6ImJhZHBvZCIsInVpZCI6ImUwOTg0MTYwLTM1NDgtNDI4Ny1iMGE4LTk3Mzc3NDRmNDU4NyJ9LCJzZXJ2aWNlYWNjb3VudCI6eyJuYW1lIjoiZGVmYXVsdCIsInVpZCI6IjY3OWZlZjAzLWI1ZTctNDE3ZC1iNDE4LTQ0YmE3ODgxMDcxMCJ9LCJ3YXJuYWZ0ZXIiOjE2ODMyOTc1NTl9LCJuYmYiOjE2ODMyOTM5NTIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDp0ZXN0OmRlZmF1bHQifQ.s81Yv1uAvI2lGrDx5KQknX00nnCu9ygrY7AtTYadTuCkzQPxeIZlY3UkN-kFa7m2zoaTWi6dwbrIexjzVRPLgW2NKo6hlIZt9Oddtp8VIdpsARfN8qAx7h1UwVL5e1Y0P5imw_kv9GV5xtRPZZ5PiNnoaJlNHK0lpwFQRvDBmIanpbm0w6Wagrzt2vHJivVgQz0G80uP33h8Q3A_OyBstE9CwQEX65QTqHfAczwAOxOYtfnBAAixkFi8x4Fkg7TQQLFnzeIaL7Y65FtUmzf5NKpFG4JxI08OD2uwhdFeAWmQJo6ws9g5jns7pjxJKKEnLq8L4ADc-wg_zyaRcr-iI1D7Utm8ggLTZL8GxuHhwXLFQhp5jux3trmIPvr85z6oZLPEDM6wO_e1cSM3J4HAvWD56cDDEJ2ga5FwffMuruRmVXbOtG8lrtlf8M4pD_7_zzb0Wsg2MoyAd1Om0StJAuWYRxiiJMoUcRBWOTsM94NrnHNHzsO4PvURA2egPH9oJkiLMYYZllAaUwWKRs8vdoxcmSalXlZuVt92vgar3dQsEEX-WpWxAfzT7Moy7WvdggmEiBdMBveszSv6gwG_PDcTr1vPqiNAt2sPFmfCk3IigOVsc9MxalfVIzdsOLIx1-t_SMdocmUR-FHCfO_ebL9Db30_GPsGWJE7w_CZ6es",
+        "expirationTimestamp": "2023-05-05T14:39:19Z"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:12.144714Z",
+    "stageTimestamp": "2023-05-05T13:39:12.160925Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": ""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "b8f2d7d3-c7c3-4fd9-aec2-b9848c6029e7",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod/status?timeout=1m0s",
+    "verb": "update",
+    "user": {
+      "username": "system:serviceaccount:openshift-multus:multus",
+      "uid": "59226320-c283-4e15-8f5a-19d45d000aae",
+      "groups": [
+        "system:serviceaccounts",
+        "system:serviceaccounts:openshift-multus",
+        "system:authenticated"
+      ],
+      "extra": {
+        "authentication.kubernetes.io/pod-name": [
+          "multus-xlv6n"
+        ],
+        "authentication.kubernetes.io/pod-uid": [
+          "3d489921-d8dc-4a25-94f0-2d6138b71887"
+        ]
+      }
+    },
+    "sourceIPs": [
+      "10.0.169.102"
+    ],
+    "userAgent": "multus/v0.0.0 (linux/amd64) kubernetes/$Format",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+      "apiVersion": "v1",
+      "resourceVersion": "669444",
+      "subresource": "status"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669444",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Pending",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "startTime": "2023-05-05T13:39:11Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "waiting": {
+                "reason": "ContainerCreating"
+              }
+            },
+            "lastState": {},
+            "ready": false,
+            "restartCount": 0,
+            "image": "fedora:latest",
+            "imageID": "",
+            "started": false
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669455",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Pending",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [fedora]"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "startTime": "2023-05-05T13:39:11Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "waiting": {
+                "reason": "ContainerCreating"
+              }
+            },
+            "lastState": {},
+            "ready": false,
+            "restartCount": 0,
+            "image": "fedora:latest",
+            "imageID": "",
+            "started": false
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:12.369035Z",
+    "stageTimestamp": "2023-05-05T13:39:12.376337Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"multus\" of ClusterRole \"multus\" to ServiceAccount \"multus/openshift-multus\""
+    }
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "RequestResponse",
+    "auditID": "00cd94ab-a42b-4b8e-a201-eb4faffa2dbf",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/test/pods/badpod/status",
+    "verb": "patch",
+    "user": {
+      "username": "system:node:ip-10-0-144-132.us-west-1.compute.internal",
+      "groups": [
+        "system:nodes",
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.0.192.33"
+    ],
+    "userAgent": "kubelet/v1.25.8+27e744f (linux/amd64) kubernetes/df8a1b9",
+    "objectRef": {
+      "resource": "pods",
+      "namespace": "test",
+      "name": "badpod",
+      "apiVersion": "v1",
+      "subresource": "status"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "metadata": {
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587"
+      },
+      "status": {
+        "$setElementOrder/conditions": [
+          {
+            "type": "Initialized"
+          },
+          {
+            "type": "Ready"
+          },
+          {
+            "type": "ContainersReady"
+          },
+          {
+            "type": "PodScheduled"
+          }
+        ],
+        "conditions": [
+          {
+            "lastTransitionTime": "2023-05-05T13:39:13Z",
+            "message": null,
+            "reason": null,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2023-05-05T13:39:13Z",
+            "message": null,
+            "reason": null,
+            "status": "True",
+            "type": "ContainersReady"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "cri-o://533ef97870d470758b4b8652254f76b72b8a62b2255fdcda39613f0235cfa171",
+            "image": "registry.fedoraproject.org/fedora:latest",
+            "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+            "lastState": {},
+            "name": "fedora",
+            "ready": true,
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2023-05-05T13:39:13Z"
+              }
+            }
+          }
+        ],
+        "phase": "Running",
+        "podIP": "10.129.2.43",
+        "podIPs": [
+          {
+            "ip": "10.129.2.43"
+          }
+        ]
+      }
+    },
+    "responseObject": {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "badpod",
+        "namespace": "test",
+        "uid": "e0984160-3548-4287-b0a8-9737744f4587",
+        "resourceVersion": "669473",
+        "creationTimestamp": "2023-05-05T13:39:11Z",
+        "annotations": {
+          "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.129.2.43/23\"],\"mac_address\":\"0a:58:0a:81:02:2b\",\"gateway_ips\":[\"10.129.2.1\"],\"ip_address\":\"10.129.2.43/23\",\"gateway_ip\":\"10.129.2.1\"}}",
+          "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "k8s.v1.cni.cncf.io/networks-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.129.2.43\"\n    ],\n    \"mac\": \"0a:58:0a:81:02:2b\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+          "openshift.io/scc": "privileged"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "kube-api-access-ps6qv",
+            "projected": {
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "kube-root-ca.crt",
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "path": "namespace",
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "configMap": {
+                    "name": "openshift-service-ca.crt",
+                    "items": [
+                      {
+                        "key": "service-ca.crt",
+                        "path": "service-ca.crt"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "defaultMode": 420
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "fedora",
+            "image": "fedora:latest",
+            "command": [
+              "sleep"
+            ],
+            "args": [
+              "infinity"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "kube-api-access-ps6qv",
+                "readOnly": true,
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+              }
+            ],
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "MKNOD"
+                ]
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Never",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "serviceAccountName": "default",
+        "serviceAccount": "default",
+        "nodeName": "ip-10-0-144-132.us-west-1.compute.internal",
+        "securityContext": {
+          "seLinuxOptions": {
+            "level": "s0:c27,c14"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "default-dockercfg-26mtg"
+          }
+        ],
+        "schedulerName": "default-scheduler",
+        "tolerations": [
+          {
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          },
+          {
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "effect": "NoExecute",
+            "tolerationSeconds": 300
+          }
+        ],
+        "priority": 0,
+        "enableServiceLinks": true,
+        "preemptionPolicy": "PreemptLowerPriority"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:13Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:13Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastProbeTime": null,
+            "lastTransitionTime": "2023-05-05T13:39:11Z"
+          }
+        ],
+        "hostIP": "10.0.144.132",
+        "podIP": "10.129.2.43",
+        "podIPs": [
+          {
+            "ip": "10.129.2.43"
+          }
+        ],
+        "startTime": "2023-05-05T13:39:11Z",
+        "containerStatuses": [
+          {
+            "name": "fedora",
+            "state": {
+              "running": {
+                "startedAt": "2023-05-05T13:39:13Z"
+              }
+            },
+            "lastState": {},
+            "ready": true,
+            "restartCount": 0,
+            "image": "registry.fedoraproject.org/fedora:latest",
+            "imageID": "registry.fedoraproject.org/fedora@sha256:158d1c036343866773afa7a7d0412f1479f2f78b881d59528ce61fd29a11e95f",
+            "containerID": "cri-o://533ef97870d470758b4b8652254f76b72b8a62b2255fdcda39613f0235cfa171",
+            "started": true
+          }
+        ],
+        "qosClass": "BestEffort"
+      }
+    },
+    "requestReceivedTimestamp": "2023-05-05T13:39:13.823869Z",
+    "stageTimestamp": "2023-05-05T13:39:13.831039Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": ""
+    }
+  }
+]

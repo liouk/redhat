@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -e
+
+main () {
+  local suffix="${1:-}"
+  [ -n "$suffix" ] && suffix="-$suffix" || suffix="-$(git rev-parse --short HEAD)"
+
+  local tag=$(git branch --show-current)
+  tag=${tag:=latest}
+  tag="$tag$suffix"
+
+  local output=$(make images | tee /dev/tty)
+  local img_orig=$(echo "$output" | grep -o "Committing changes to .* ..." | cut -d' ' -f4)
+  local repo=$(echo "$img_orig" | cut -d':' -f2)
+
+  local img_new="$OCP_REGISTRY/$repo:$tag"
+
+  # rename to quay.io registry
+  echo
+  docker image tag "$img_orig" "$img_new"
+  echo "Tagged: $img_new"
+  docker rmi "$img_orig"
+  echo
+
+  read -p "Push image '$img_new'? [yN] " yn
+  case $yn in
+    y|yes) echo && docker push "$img_new";;
+    *) ;;
+  esac
+}
+
+[ -z "$OCP_REGISTRY" ] && { echo "OCP_REGISTRY env variable required but is not set"; exit 1; }
+
+main "$@"

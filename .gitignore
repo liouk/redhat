@@ -1,0 +1,11 @@
+# openshift installer binaries
+openshift-install*
+
+# openshift origin repos
+openshift/
+
+# my forks from openshift repos
+liouk/
+
+# ocp cluser configs dir
+.openshift_clusters/
