@@ -4,6 +4,9 @@ openshift-install*
 # openshift origin repos
 openshift/
 
+# kubernetes origin repos
+kubernetes/
+
 # my forks from openshift repos
 liouk/
 
