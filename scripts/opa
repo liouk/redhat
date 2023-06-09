@@ -77,7 +77,8 @@ cmd_list () {
 
   # FIXME:
   # [ERROR] 2023/04/06 15:32:49 "website" isn't a field in the "irinis cluster console" item. This may be because you are trying to access an autofill url, using the `--fields` flag. In order to access urls, you can use `op item get ITEM --format json | jq .urls`
-  if ! secret=$(op --session "$OP_SESSION" item get "$selected_id" --fields "type=concealed" --format=json | jq -r '.value' 2>/dev/null); then
+  secret=$(op --session "$OP_SESSION" item get "$selected_id" --fields "type=concealed" --format=json | jq -r '.value' 2>/dev/null) || true
+  if [[ "$secret" == "" || "$1" == "--choose" || "$1" == "-c" ]]; then
     while IFS= read -r field; do
       [ "$field" = "Fields:" ] && continue
       field_name=$(echo $field | cut -d':' -f1)
@@ -105,7 +106,7 @@ main () {
   cmd="$1"
   case "$cmd" in
     tok|gpg|list|signin) ;;
-    "") cmd="list" ;;
+    ""|"--choose"|"-c") cmd="list" ;;
     *) echo "unknown command: '$1'"; exit 1;;
   esac
 
