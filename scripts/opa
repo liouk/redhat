@@ -90,6 +90,9 @@ cmd_list () {
     [ "$selected_field" = "" ] && { echo "no selection; bye"; exit; }
 
     secret=$(op --session "$OP_SESSION" item get "$selected_id" --field "$selected_field")
+    if [[ "$secret" == otpauth* ]]; then
+      secret=$(op --session "$OP_SESSION" item get "$selected_id" --otp)
+    fi
     secret=${secret#"\""}
     secret=${secret%"\""}
   fi
