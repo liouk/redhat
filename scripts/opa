@@ -10,8 +10,12 @@ set -e
 
 op_signin () {
   local op_session_file="$HOME/.config/op/.session-token"
-  OP_SESSION=$(cat $op_session_file 2>/dev/null)
-  op --session "$OP_SESSION" user list > /dev/null 2>&1 && return
+  if [ -f "$op_session_file" ]; then
+    OP_SESSION=$(cat $op_session_file 2>/dev/null)
+    op --session "$OP_SESSION" user list > /dev/null 2>&1 && return
+  else
+    touch "$op_session_file"
+  fi
 
   OP_SESSION=$(op signin --account my --raw)
   chmod 600 "$op_session_file"
@@ -105,10 +109,15 @@ cmd_signin () {
   :
 }
 
+cmd_clear () {
+  # clear session file
+  rm -f "$HOME/.config/op/.session-token"
+}
+
 main () {
   cmd="$1"
   case "$cmd" in
-    tok|gpg|list|signin) ;;
+    tok|gpg|list|signin|clear) ;;
     ""|"--choose"|"-c") cmd="list" ;;
     *) echo "unknown command: '$1'"; exit 1;;
   esac
