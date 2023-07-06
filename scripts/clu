@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# common k8s/ocp cluster operations
+# requires:
+# - fzf: https://github.com/junegunn/fzf
+
 set -e
 [ -n "$TRACE" ] && set -x
 
@@ -100,7 +104,7 @@ create_openshift_cluster () {
 
   echo -e "\nCluster to be created"
   echo -e "* Cluster name:\t$cluster_name"
-  echo -e "* OCP Version:\t $ocp_version"
+  echo -e "* OCP Version:\t$ocp_version"
   echo -e "* Installer:\t$openshift_installer"
   echo -e "* Config dir:\t$cluster_path\n"
   read -p "Proceed? [yN] " yn
@@ -273,7 +277,7 @@ cmd_config () {
   echo "KUBECONFIG=$KUBECONFIG"
   echo
   echo "Choose a cluster config:"
-  selected=$(gum choose --cursor.foreground "#FFA066" "${all_configs[@]}")
+  selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
   if [[ "$selected" == "" ]]; then
     echo "No selection, bye"
     exit 1
@@ -283,7 +287,7 @@ cmd_config () {
     selected="$selected/auth/kubeconfig"
   fi
 
-  echo "> $selected"
+  echo -e "$selected\n"
   echo "export KUBECONFIG=$selected" > "$OCP_CLUSTER_KUBECONFIG"
   echo -e "Exported KUBECONFIG; run 'exec zsh' to load it"
 }
@@ -291,29 +295,17 @@ cmd_config () {
 cmd_clean () {
   load_cluster_configs
 
-  echo "Choose which cluster configs to remove (hit space to select):"
-  export GUM_CHOOSE_CURSOR_PREFIX="[ ] "
-  export GUM_CHOOSE_UNSELECTED_PREFIX="[ ] "
-  export GUM_CHOOSE_SELECTED_PREFIX="[*] "
-  if [[ "${#all_configs[@]}" -eq "1" ]]; then
-    export GUM_CHOOSE_CURSOR_PREFIX="[*] "
-  fi
-
-  selected=$(gum choose \
-    --no-limit \
-    --cursor.foreground "#FFA066" \
-    --selected.foreground "#FFA066" \
-    "${all_configs[@]}")
-
+  echo "Cluster config to remove:"
+  selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
   if [[ "$selected" == "" ]]; then
     echo "No selection, bye"
     exit 1
   fi
 
   mkdir -p $OCP_CLUSTER_CONFIG_ARCHIVE_DIR
-  echo "$selected" | xargs -I {} mv {} "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR"
-  echo "Files moved to '$OCP_CLUSTER_CONFIG_ARCHIVE_DIR':"
-  echo "$selected"
+  rm -rf "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR/$(basename $selected)"
+  mv "$selected" "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR"
+  echo "Config '$selected' moved to '$OCP_CLUSTER_CONFIG_ARCHIVE_DIR'"
 
   # also delete archived cluster configs older than 14 days
   find $OCP_CLUSTER_CONFIG_ARCHIVE_DIR/* -type d -ctime +14 -exec rm -rf {} \;
