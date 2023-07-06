@@ -3,7 +3,7 @@
 # useful 1password wrapper for common commands
 # requires:
 # - 1password CLI: https://developer.1password.com/docs/cli/get-started/#install
-# - gum: https://github.com/charmbracelet/gum
+# - fzf: https://github.com/junegunn/fzf
 
 set -e
 [ -n "$TRACE" ] && set -x
@@ -74,8 +74,10 @@ cmd_gpg () {
 }
 
 cmd_list () {
-  local selected=$(op --session "$OP_SESSION" item list | tail -n +2 | awk -F '    ' '{print $1"    "$2}' | fzf)
+  echo "Choose item:"
+  local selected=$(op --session "$OP_SESSION" item list | tail -n +2 | awk -F '    ' '{print $1"    "$2}' | fzf --height=~10)
   [ "$selected" = "" ] && { echo "no selection; bye"; exit; }
+  echo -e "$selected\n"
   local selected_id=$(echo -n "$selected" | cut -d' ' -f1)
   all_field_names=()
 
@@ -89,9 +91,10 @@ cmd_list () {
       [[ -z "${field_name// }" ]] || all_field_names+=("$field_name")
     done <<< $(op --session "$OP_SESSION" item get "$selected_id" | sed -n '/^Fields:$/,$p')
 
-    echo "Select field to copy:"
-    selected_field=$(gum choose "${all_field_names[@]}")
+    echo "Choose field:"
+    selected_field=$(printf "%s\n" "${all_field_names[@]}" | fzf --prompt "Field> " --height=~10)
     [ "$selected_field" = "" ] && { echo "no selection; bye"; exit; }
+    echo -e "$selected_field\n"
 
     secret=$(op --session "$OP_SESSION" item get "$selected_id" --field "$selected_field")
     if [[ "$secret" == otpauth* ]]; then
