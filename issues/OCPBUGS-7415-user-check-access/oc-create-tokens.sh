@@ -16,6 +16,7 @@ oc delete rolebinding myrb || true
 oc delete role myrole || true
 oc delete rolebinding myrb-writer || true
 oc delete role myrole-writer || true
+oc delete pod nginx || true
 cat <<EOF | oc apply -f -
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -187,6 +188,7 @@ for ns in default test; do
   echo -n "  can-i create pods? "; oc auth can-i create pods -n $ns || true
   echo -n "  can-i update pods? "; oc auth can-i update pods -n $ns || true
   echo -n "  can-i watch pods? "; oc auth can-i watch pods -n $ns || true
+  echo -n "  can-i create self-SARs? "; oc auth can-i create selfsubjectaccessreviews || true
 done
 
 # test SelfSARs with can-i; run can-i with -v10 to inspect the actual SelfSubjectAccessReview request
@@ -194,14 +196,14 @@ tokens=(        "$token_f"      "$token_ca"      "$token_cai"     "$token_inf"  
 hashes=(        "$hash_f"       "$hash_ca"       "$hash_cai"      "$hash_inf"      "$hash_role"   "$hash_role")
 scopes=(        "$scopes_f"     "$scopes_ca"     "$scopes_cai"    "$scopes_inf"    "$scopes_role" "$scopes_role")
 namespaces=(    "default"       "default"        "default"        "default"        "default"      "test")
-exp_get=(       "yes"           "yes"            "yes"            "scope prevents" "yes"          "no")
-exp_do_get=(    "yes"           "scope prevents" "scope prevents" "scope prevents" "yes"          "no")
-exp_create=(    "no"            "no"             "no"             "scope prevents" "no"           "no")
-exp_do_create=( "role prevents" "scope prevents" "scope prevents" "scope prevents" "no"           "no")
+exp_get=(       "yes"           "yes"            "yes"            "scopes prevent" "yes"          "no")
+exp_do_get=(    "ok"            "scopes prevent" "scopes prevent" "scopes prevent" "yes"          "no")
+exp_create=(    "yes"           "yes"            "yes"            "scopes prevent" "no"           "no")
+exp_do_create=( "ok"            "scopes prevent" "scopes prevent" "scopes prevent" "no"           "no")
 
 echo -e "\n*** Checking self-SAR via token login"
-# for i in ${!tokens[@]}; do
-for i in 4 5; do
+for i in ${!tokens[@]}; do
+# for i in 4 5; do
   echo
   echo "hash:      ${hashes[$i]}"
   echo "token:     ${tokens[$i]}"
@@ -221,4 +223,7 @@ for i in 4 5; do
 
   printf "===> create pods? (expected: ${exp_do_create[$i]})\n"
   oc -n ${namespaces[$i]} run nginx --image=nginx --port=80 --restart=Never || true
+
+  printf "===> create self-SARs?\n"
+  oc auth can-i create selfsubjectaccessreviews || true
 done
