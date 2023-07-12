@@ -312,14 +312,14 @@ cmd_clean () {
 }
 
 # check which clusters from the available configs are still active
-cmd_check() {
+cmd_check () {
   load_cluster_configs
   for config in ${all_configs[@]}; do
     if [[ "$config" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/${RH_USERNAME}-"* ]]; then
       config="$config/auth/kubeconfig"
     fi
-    echo "* checking '$config'"
-    KUBECONFIG="$config" oc status || true
+    echo "checking '$config'"
+    KUBECONFIG="$config" oc status 2>&1 >/dev/null && echo "* alive" || echo "* dead"
   done
 }
 
