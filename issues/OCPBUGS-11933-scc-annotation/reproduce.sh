@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+pod_name="${1:-badpod}"
+
 # SCCs are disabled in the 'default' namespace, therefore we need
 # to create a new one to reproduce the issue
 oc delete namespace test
@@ -12,7 +14,7 @@ cat <<EOF | oc -n test create -f -
 kind: Pod
 apiVersion: v1
 metadata:
-  name: badpod
+  name: $pod_name
 spec:
     restartPolicy: Never
     containers:
@@ -47,10 +49,10 @@ spec:
           - ALL
 EOF
 
-oc -n test get pod badpod -ojson|jq '.|{podname: .metadata.name, "openshift.io/scc": .metadata.annotations."openshift.io/scc"}'
+oc -n test get pod $pod_name -ojson|jq '.|{podname: .metadata.name, "openshift.io/scc": .metadata.annotations."openshift.io/scc"}'
 oc -n test get pod goodpod -ojson|jq '.|{podname: .metadata.name, "openshift.io/scc": .metadata.annotations."openshift.io/scc"}'
 
 echo
-oc -n test adm policy scc-subject-review -u $(oc whoami) -f <(oc -n test get pod badpod -oyaml)
+oc -n test adm policy scc-subject-review -u $(oc whoami) -f <(oc -n test get pod $pod_name -oyaml)
 
 # oc describe scc anyuid
