@@ -21,7 +21,7 @@ usage () {
 Manipulate openshift clusters.
 
 COMMANDS
-    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config]
+    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions]
         Create a new cluster on AWS using openshift-install.
 
     destroy [-v|--ocp-version <string>]
@@ -218,6 +218,15 @@ cmd_create () {
       -i|--interactive-config)
         arg_interactive_config=1
         shift
+        ;;
+      -l|--list-versions)
+        echo "INSTALLERS:"
+        find $OCP_INSTALLER_DIR -type f -name "openshift-install-*"
+        echo
+
+        echo "TEMPLATES:"
+        find $OCP_CLUSTER_CONFIG_TEMPLATES_DIR -type f
+        exit 0
         ;;
       *)
         echo "Error: unknown argument '$1' for command 'create'"
