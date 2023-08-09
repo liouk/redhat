@@ -8,7 +8,8 @@ set -e
 [ -n "$TRACE" ] && set -x
 
 # openshift-install
-ocp_base_url="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp"
+ocp_releases_url="https://amd64.ocp.releases.ci.openshift.org"
+ocp_release_artifacts_url="https://openshift-release-artifacts.apps.ci.l2s4.p1.openshiftapps.com/"
 openshift_installer=
 ocp_version=
 
@@ -35,7 +36,7 @@ COMMANDS
 
     installer [-v|--ocp-version <string>]
         Download the openshift-install binary.
-        Releases: $ocp_base_url
+        Releases: $ocp_releases_url
 
     -h, --help, help, usage
         Print this usage message.
@@ -162,7 +163,7 @@ load_cluster_configs () {
 
 # commands
 cmd_installer () {
-  local ocp_version_label="stable"
+  local ocp_version_label=
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -v|--version)
@@ -177,14 +178,18 @@ cmd_installer () {
         ;;
     esac
   done
+  [ -z "$ocp_version_label" ] && { echo "Error: no version specified. Check '$(basename $0) --help'."; exit 1;}
 
-  local ocp_url="$ocp_base_url/$ocp_version_label"
-
+  local ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
   ocp_version=$(curl -s "$ocp_url/release.txt")
-  if [[ "$ocp_version" != *"Name:"* ]]; then
-    echo "Error: version '$ocp_version_label' not found; please check available releases in $ocp_base_url"
-    exit 1
-  fi
+  while [[ "$ocp_version" != *"Name:"*"$ocp_version_label"* ]]; do
+    echo "Version '$ocp_version_label' not found; please check available releases in $ocp_releases_url"
+    read -p "Version? ['q' aborts] " ocp_version_label
+    [ "$inp_version" == "q" ] && { echo "Abort."; exit 1; }
+
+    ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
+    ocp_version=$(curl -s "$ocp_url/release.txt")
+  done
   ocp_version=$(echo "$ocp_version" | grep "^Name:" | tr -s ' ' | cut -d' ' -f2)
 
   openshift_installer="${OCP_INSTALLER_DIR}/openshift-install-${ocp_version}"
@@ -194,7 +199,7 @@ cmd_installer () {
     return
   fi
 
-  curl "$ocp_url/openshift-install-linux.tar.gz" --output $OCP_INSTALLER_DIR/openshift-install.tar.gz
+  curl "${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz" --output $OCP_INSTALLER_DIR/openshift-install.tar.gz
   tar -xzf $OCP_INSTALLER_DIR/openshift-install.tar.gz -C $OCP_INSTALLER_DIR "openshift-install" --transform "s/openshift-install/openshift-install-$ocp_version/"
   rm $OCP_INSTALLER_DIR/openshift-install.tar.gz
 }
@@ -226,6 +231,8 @@ cmd_create () {
 
         echo "TEMPLATES:"
         find $OCP_CLUSTER_CONFIG_TEMPLATES_DIR -type f
+
+        echo -e "\nFor more versions, see $ocp_releases_url"
         exit 0
         ;;
       *)
