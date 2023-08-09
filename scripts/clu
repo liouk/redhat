@@ -22,7 +22,7 @@ usage () {
 Manipulate openshift clusters.
 
 COMMANDS
-    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions]
+    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override]
         Create a new cluster on AWS using openshift-install.
 
     destroy [-v|--ocp-version <string>]
@@ -65,6 +65,7 @@ op_signin() {
 # takes ~45min
 create_openshift_cluster () {
   local interactive_config="$1"
+  local release_image_override="$2"
   local platform="aws"
   local template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version}.yaml"
 
@@ -108,6 +109,7 @@ create_openshift_cluster () {
   echo -e "* OCP Version:\t$ocp_version"
   echo -e "* Installer:\t$openshift_installer"
   echo -e "* Config dir:\t$cluster_path\n"
+  echo -e "* Image override:\t$release_image_override\n"
   read -p "Proceed? [yN] " yn
   case $yn in
     y|yes) ;;
@@ -116,7 +118,7 @@ create_openshift_cluster () {
 
   # create cluster
   echo "Will create cluster '$cluster_path'"
-  $openshift_installer --dir="$cluster_path" create cluster
+  SSH_AUTH_SOCK= OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=$release_image_override $openshift_installer --dir="$cluster_path" create cluster
   echo "Cluster metadata stored in '$cluster_path'"
 
   # create 1p entry with console credentials
@@ -183,9 +185,10 @@ cmd_installer () {
   local ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
   ocp_version=$(curl -s "$ocp_url/release.txt")
   while [[ "$ocp_version" != *"Name:"*"$ocp_version_label"* ]]; do
-    echo "Version '$ocp_version_label' not found; please check available releases in $ocp_releases_url"
+    echo "Version '$ocp_version_label' not found in '$ocp_url/release.txt'"
+    echo "Please check available releases in $ocp_releases_url"
     read -p "Version? ['q' aborts] " ocp_version_label
-    [ "$inp_version" == "q" ] && { echo "Abort."; exit 1; }
+    [ "$ocp_version_label" == "q" ] && { echo "Abort."; exit 1; }
 
     ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
     ocp_version=$(curl -s "$ocp_url/release.txt")
@@ -235,6 +238,11 @@ cmd_create () {
         echo -e "\nFor more versions, see $ocp_releases_url"
         exit 0
         ;;
+      --img-override)
+        arg_release_image_override="$2"
+        shift
+        shift
+        ;;
       *)
         echo "Error: unknown argument '$1' for command 'create'"
         usage
@@ -257,7 +265,7 @@ cmd_create () {
     exit 1
   fi
 
-  aws_login && create_openshift_cluster "$arg_interactive_config"
+  aws_login && create_openshift_cluster "$arg_interactive_config" "$arg_release_image_override"
 }
 
 cmd_destroy () {
