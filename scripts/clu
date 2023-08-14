@@ -7,9 +7,14 @@
 set -e
 [ -n "$TRACE" ] && set -x
 
-# openshift-install
+# openshift-install from CI
 ocp_releases_url="https://amd64.ocp.releases.ci.openshift.org"
 ocp_release_artifacts_url="https://openshift-release-artifacts.apps.ci.l2s4.p1.openshiftapps.com/"
+
+# openshift-install from public stream
+ocp_releases_pub_url="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp"
+ocp_release_pub_artifacts_url="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp"
+
 openshift_installer=
 ocp_version=
 
@@ -22,7 +27,7 @@ usage () {
 Manipulate openshift clusters.
 
 COMMANDS
-    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override]
+    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override] [--pub]
         Create a new cluster on AWS using openshift-install.
 
     destroy [-v|--ocp-version <string>]
@@ -34,9 +39,15 @@ COMMANDS
     clean
         Delete existing cluster configurations.
 
-    installer [-v|--ocp-version <string>]
+    installer [-v|--ocp-version <string>] [--pub]
         Download the openshift-install binary.
         Releases: $ocp_releases_url
+
+        -v,--ocp-version <string>
+          Specify the version to install (required).
+
+        --pub
+          Use the public mirror instead of the CI which is the default.
 
     -h, --help, help, usage
         Print this usage message.
@@ -166,11 +177,16 @@ load_cluster_configs () {
 # commands
 cmd_installer () {
   local ocp_version_label=
+  local ocp_pub=
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -v|--version)
         ocp_version_label="$2"
         shift
+        shift
+        ;;
+      --pub)
+        ocp_pub=1
         shift
         ;;
       *)
@@ -182,7 +198,19 @@ cmd_installer () {
   done
   [ -z "$ocp_version_label" ] && { echo "Error: no version specified. Check '$(basename $0) --help'."; exit 1;}
 
-  local ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
+  local ocp_url=
+  local ocp_installer_dir=
+  if [ -n "$ocp_pub" ]; then
+    # install from public releases
+    ocp_url="$ocp_release_pub_artifacts_url/$ocp_version_label"
+    ocp_installer_dir="$OCP_INSTALLER_DIR/pub"
+
+  else
+    # install from CI releases
+    ocp_url="$ocp_release_artifacts_url/$ocp_version_label"
+    ocp_installer_dir="$OCP_INSTALLER_DIR/ci"
+  fi
+
   ocp_version=$(curl -s "$ocp_url/release.txt")
   while [[ "$ocp_version" != *"Name:"*"$ocp_version_label"* ]]; do
     echo "Version '$ocp_version_label' not found in '$ocp_url/release.txt'"
@@ -195,22 +223,25 @@ cmd_installer () {
   done
   ocp_version=$(echo "$ocp_version" | grep "^Name:" | tr -s ' ' | cut -d' ' -f2)
 
-  openshift_installer="${OCP_INSTALLER_DIR}/openshift-install-${ocp_version}"
+  openshift_installer="${ocp_installer_dir}/openshift-install-${ocp_version}"
   if [ -f "$openshift_installer" ]; then
     echo "OpenShift installer found; will not download"
+    echo "Location: $openshift_installer"
     $openshift_installer version
     return
   fi
 
-  curl "${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz" --output $OCP_INSTALLER_DIR/openshift-install.tar.gz
-  tar -xzf $OCP_INSTALLER_DIR/openshift-install.tar.gz -C $OCP_INSTALLER_DIR "openshift-install" --transform "s/openshift-install/openshift-install-$ocp_version/"
-  rm $OCP_INSTALLER_DIR/openshift-install.tar.gz
+  echo "Downloading installer: ${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz"
+  curl "${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz" --output $ocp_installer_dir/openshift-install.tar.gz
+  tar -xzf $ocp_installer_dir/openshift-install.tar.gz -C $ocp_installer_dir "openshift-install" --transform "s/openshift-install/openshift-install-$ocp_version/"
+  rm $ocp_installer_dir/openshift-install.tar.gz
 }
 
 cmd_create () {
   local arg_name=
   local arg_version=
   local arg_interactive_config=
+  local arg_pub=
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -n|--name)
@@ -243,6 +274,10 @@ cmd_create () {
         shift
         shift
         ;;
+      --pub)
+        arg_pub="--pub"
+        shift
+        ;;
       *)
         echo "Error: unknown argument '$1' for command 'create'"
         usage
@@ -251,7 +286,7 @@ cmd_create () {
     esac
   done
 
-  cmd_installer $arg_version
+  cmd_installer $arg_version $arg_pub
 
   cluster_name="${RH_USERNAME}-v${ocp_version}-$(date '+%Y%m%d')"
   [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && cluster_name="${cluster_name}-$(date '+%H%M')"
