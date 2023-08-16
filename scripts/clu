@@ -119,7 +119,7 @@ create_openshift_cluster () {
   echo -e "* Cluster name:\t$cluster_name"
   echo -e "* OCP Version:\t$ocp_version"
   echo -e "* Installer:\t$openshift_installer"
-  echo -e "* Config dir:\t$cluster_path\n"
+  echo -e "* Config dir:\t$cluster_path"
   echo -e "* Image override:\t$release_image_override\n"
   read -p "Proceed? [yN] " yn
   case $yn in
