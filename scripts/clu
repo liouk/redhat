@@ -33,7 +33,7 @@ COMMANDS
     destroy [-v|--ocp-version <string>]
         Select and destroy an existing cluster using openshift-install.
 
-    config
+    config [-d|--delete]
         Choose a cluster configuration and export it to KUBECONFIG.
 
     clean
@@ -331,6 +331,35 @@ cmd_destroy () {
 
 cmd_config () {
   load_cluster_configs
+
+  local arg="$1"
+  case "$arg" in
+    -d|--delete)
+      # delete config files instead of choosing one
+      echo "Cluster config to remove:"
+      selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
+      if [[ "$selected" == "" ]]; then
+        echo "No selection, bye"
+        exit 1
+      fi
+
+      mkdir -p $OCP_CLUSTER_CONFIG_ARCHIVE_DIR
+      rm -rf "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR/$(basename $selected)"
+      mv "$selected" "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR"
+      echo "Config '$selected' moved to '$OCP_CLUSTER_CONFIG_ARCHIVE_DIR'"
+
+      # also delete archived cluster configs older than 14 days
+      find $OCP_CLUSTER_CONFIG_ARCHIVE_DIR/* -type d -ctime +14 -exec rm -rf {} \;
+      return
+      ;;
+    "")
+      ;;
+    *)
+      echo "Error: unknown argument '$arg'"
+      usage
+      exit 1
+      ;;
+  esac
 
   echo "Current value:"
   echo "KUBECONFIG=$KUBECONFIG"
