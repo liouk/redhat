@@ -36,8 +36,18 @@ COMMANDS
     config [-d|--delete]
         Choose a cluster configuration and export it to KUBECONFIG.
 
-    clean
-        Delete existing cluster configurations.
+        -d,--delete
+          Delete existing cluster configurations.
+
+    clean [-i|--installers] [-t|--templates]
+        Delete installers and/or templates. If -i/-it are not provided, this command will
+        delete all installers and templates.
+
+        -i,--installers
+            Delete installers only.
+
+        -t,--templates
+            Delete templates only.
 
     installer [-v|--ocp-version <string>] [--pub]
         Download the openshift-install binary.
@@ -323,6 +333,7 @@ cmd_destroy () {
   cmd_installer $arg_version
 
   read -p "Will destroy cluster '$KUBECONFIG'; ok? [yN] " yn
+  # FIXME: I don't need the kubeconfig, just the cluster dir; fix to be able to destroy incomplete clusters
   case $yn in
     y|yes) $openshift_installer destroy cluster --dir ${KUBECONFIG%"/auth/kubeconfig"};;
     *) echo "Aborting" && exit 1;;
@@ -381,22 +392,55 @@ cmd_config () {
 }
 
 cmd_clean () {
-  load_cluster_configs
+  local clean_installers=
+  local clean_templates=
+  local clean_all=1
 
-  echo "Cluster config to remove:"
-  selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
-  if [[ "$selected" == "" ]]; then
-    echo "No selection, bye"
-    exit 1
+  while [[ $# -gt 0 ]]; do
+    local arg="$1"
+    case "$arg" in
+      -i|--installers)
+        clean_installers=1
+        clean_all=
+        shift
+        ;;
+      -t|--templates)
+        clean_templates=1
+        clean_all=
+        shift
+        ;;
+      *)
+        echo "Error: unknown argument '$arg'"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  echo "Will delete the following:"
+  if [ -n "$clean_all" ] || [ -n "$clean_installers" ]; then
+    echo -e "\nINSTALLERS:"
+    find $OCP_INSTALLER_DIR -type f -name "openshift-install-*"
+  fi
+  if [ -n "$clean_all" ] || [ -n "$clean_templates" ]; then
+    echo -e "\nTEMPLATES:"
+    find $OCP_CLUSTER_CONFIG_TEMPLATES_DIR -type f
   fi
 
-  mkdir -p $OCP_CLUSTER_CONFIG_ARCHIVE_DIR
-  rm -rf "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR/$(basename $selected)"
-  mv "$selected" "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR"
-  echo "Config '$selected' moved to '$OCP_CLUSTER_CONFIG_ARCHIVE_DIR'"
+  echo
+  read -p "Proceed? [yN] " yn
+  case $yn in
+    y|yes) ;;
+    *) echo "Abort." && exit 1;;
+  esac
 
-  # also delete archived cluster configs older than 14 days
-  find $OCP_CLUSTER_CONFIG_ARCHIVE_DIR/* -type d -ctime +14 -exec rm -rf {} \;
+  if [ -n "$clean_all" ] || [ -n "$clean_installers" ]; then
+    find $OCP_INSTALLER_DIR -type f -name "openshift-install-*" -exec rm -rf {} \;
+  fi
+
+  if [ -n "$clean_all" ] || [ -n "$clean_templates" ]; then
+    find $OCP_CLUSTER_CONFIG_TEMPLATES_DIR -type f -exec rm -rf {} \;
+  fi
 }
 
 # check which clusters from the available configs are still active
