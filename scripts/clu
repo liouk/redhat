@@ -382,7 +382,7 @@ cmd_config () {
     exit 1
   fi
 
-  if [[ "$selected" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/${RH_USERNAME}-"* ]]; then
+  if [[ "$selected" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/"* ]]; then
     selected="$selected/auth/kubeconfig"
   fi
 
@@ -447,7 +447,7 @@ cmd_clean () {
 cmd_check () {
   load_cluster_configs
   for config in ${all_configs[@]}; do
-    if [[ "$config" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/${RH_USERNAME}-"* ]]; then
+    if [[ "$config" == *"${OCP_CLUSTER_CONFIG_DIRNAME}/"* ]]; then
       config="$config/auth/kubeconfig"
     fi
     echo "checking '$config'"
