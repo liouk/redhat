@@ -146,10 +146,12 @@ create_openshift_cluster () {
   echo "Will update 1p entry '$OP_ENTRY_OCP_CONSOLE' with URL and password"
   op_signin
   kubeadmin_password=$(cat "$cluster_path/auth/kubeadmin-password")
+  server_url=$(grep "server:" $cluster_path/auth/kubeconfig -m 1 | cut -d" " -f6)
   web_console_url=$(grep -o "https://console-openshift-console.*.openshift.com" "$cluster_path/.openshift_install.log")
   op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" password="$kubeadmin_password" > /dev/null
   op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" website="$web_console_url" > /dev/null
   op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" cluster="$cluster_name" > /dev/null
+  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" server="$server_url" > /dev/null
 
   # use this kubeconfig
   cluster_conf="${OCP_CLUSTER_CONFIG_DIR}/${cluster_name}/auth/kubeconfig"
