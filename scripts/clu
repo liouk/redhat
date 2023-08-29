@@ -30,8 +30,11 @@ COMMANDS
     create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override] [--pub]
         Create a new cluster on AWS using openshift-install.
 
-    destroy [-v|--ocp-version <string>]
+    destroy [-v|--ocp-version <string>] [-d|--dir <path>]
         Select and destroy an existing cluster using openshift-install.
+
+        -d|--dir <path>
+          Specify the directory of the cluster to destroy.
 
     config [-d|--delete]
         Choose a cluster configuration and export it to KUBECONFIG.
@@ -317,8 +320,14 @@ cmd_create () {
 
 cmd_destroy () {
   local arg_version=
+  local arg_dir="$KUBECONFIG"
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      -d|--dir)
+        arg_dir="$2"
+        shift
+        shift
+        ;;
       -v|--ocp-version)
         arg_version="-v $2"
         shift
@@ -334,10 +343,9 @@ cmd_destroy () {
 
   cmd_installer $arg_version
 
-  read -p "Will destroy cluster '$KUBECONFIG'; ok? [yN] " yn
-  # FIXME: I don't need the kubeconfig, just the cluster dir; fix to be able to destroy incomplete clusters
+  read -p "Will destroy cluster '$arg_dir'; ok? [yN] " yn
   case $yn in
-    y|yes) $openshift_installer destroy cluster --dir ${KUBECONFIG%"/auth/kubeconfig"};;
+    y|yes) $openshift_installer destroy cluster --dir ${arg_dir%"/auth/kubeconfig"};;
     *) echo "Aborting" && exit 1;;
   esac
 }
