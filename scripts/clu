@@ -91,9 +91,13 @@ create_openshift_cluster () {
   local interactive_config="$1"
   local release_image_override="$2"
   local platform="aws"
-  local template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version}.yaml"
+  local ocp_version_short=$(echo $ocp_version | cut -f1,2 -d'.')
+  local template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version_short}.yaml"
 
-  if [ -n "$interactive_config" ]; then
+  if [ -n "$interactive_config" ] || [ ! -f "$template_file" ]; then
+    if [ ! -f "$template_file" ]; then
+      echo "No template found for $platform/$ocp_version_short"
+    fi
     echo -e "Will create interactive install configuration\n"
     $openshift_installer --dir="$OCP_CLUSTER_CONFIG_DIR/tmp-interactive" create install-config
 
