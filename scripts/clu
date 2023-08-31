@@ -230,6 +230,15 @@ cmd_installer () {
     ocp_installer_dir="$OCP_INSTALLER_DIR/ci"
   fi
 
+  ocp_version="$ocp_version_label"
+  openshift_installer="${ocp_installer_dir}/openshift-install-${ocp_version}"
+  if [ -f "$openshift_installer" ]; then
+    echo "OpenShift installer found; will not download"
+    echo "Location: $openshift_installer"
+    $openshift_installer version
+    return
+  fi
+
   ocp_version=$(curl -s "$ocp_url/release.txt")
   while [[ "$ocp_version" != *"Name:"*"$ocp_version_label"* ]]; do
     echo "Version '$ocp_version_label' not found in '$ocp_url/release.txt'"
@@ -241,14 +250,6 @@ cmd_installer () {
     ocp_version=$(curl -s "$ocp_url/release.txt")
   done
   ocp_version=$(echo "$ocp_version" | grep "^Name:" | tr -s ' ' | cut -d' ' -f2)
-
-  openshift_installer="${ocp_installer_dir}/openshift-install-${ocp_version}"
-  if [ -f "$openshift_installer" ]; then
-    echo "OpenShift installer found; will not download"
-    echo "Location: $openshift_installer"
-    $openshift_installer version
-    return
-  fi
 
   echo "Downloading installer: ${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz"
   curl "${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz" --output $ocp_installer_dir/openshift-install.tar.gz
