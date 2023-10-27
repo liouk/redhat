@@ -1,14 +1,8 @@
 # openshift installer binaries
 openshift-install*
 
-# openshift origin repos
-openshift/
-
-# kubernetes origin repos
-kubernetes/
-
-# my forks from openshift repos
-liouk/
+# openshift/kubernetes/liouk/other origin repos
+repos/
 
 # ocp cluser configs dir
 .openshift_clusters/
