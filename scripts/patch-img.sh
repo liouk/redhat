@@ -25,6 +25,16 @@ patch_cluster-authentication-operator () {
     -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image"
 }
 
+patch_console-operator () {
+  kubectl -n openshift-console-operator \
+    set image deployment/console-operator \
+    console-operator="$IMG"
+
+  kubectl -n openshift-console-operator \
+    get deployment console-operator \
+    -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image"
+}
+
 patch_oauth-server () {
   kubectl get deployment -n {openshift-,}authentication-operator -o json \
     | jq ".spec.template.spec.containers[0].env[0].value = \"$IMG\"" \
