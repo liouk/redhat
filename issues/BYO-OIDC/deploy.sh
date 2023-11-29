@@ -22,7 +22,7 @@ step () {
 }
 
 # CVO overrides
-kubectl patch clusterversion version --type="merge" -p "$(cat <<- EOF
+kubectl patch clusterversion version --type="merge" --patch="$(cat <<- EOF
 spec:
   overrides:
   - group: config.openshift.io
@@ -102,11 +102,20 @@ kubectl patch clusterrole console-operator --type="json" --patch="$(cat <<- EOF
     "op": "add",
     "path": "/rules/2/resources/-",
     "value": "authentications"
+  },
+  {
+    "op": "add",
+    "path": "/rules/-",
+    "value": {
+      "apiGroups": ["config.openshift.io"],
+      "resources": ["authentications/status"],
+      "verbs": ["patch"]
+    }
   }
 ]
 EOF
 )"
-step "update clusterrole console-operator\n"
+step "patch clusterrole console-operator\n"
 
 # update authentication CR with type oidc and fake oidc provider
 patch="$(cat <<- EOF
@@ -120,16 +129,21 @@ spec:
       audiences: ['openshift-aud']
 EOF
 )"
-echo -e "Will patch Authentication with:\n$patch\n"
 kubectl patch authentication cluster --type="merge" -p "$patch"
-step "update Authentication with type OIDC and OIDCProvider\n"
+step "patch Authentication with type OIDC and OIDCProvider\n"
 
-yellow "TODO" "create fake OIDC client\n"
-
-yellow "TODO" "update Authentication with fake OIDC client\n"
+echo stop && exit
 
 # set console-operator image
 read -p "console-operator image: " img
 echo "image: $img"
 kubectl -n openshift-console-operator set image deployment/console-operator console-operator="$img"
 step "override console-operator image\n"
+
+# at this point the operator aborts configuration of OIDC as there is no oidc client configured; what remains
+# is to create an oauthclient suitable for OIDC and configure it in the Authentication CR so that the operator
+# picks it up
+
+yellow "TODO" "create fake OIDC client\n"
+
+yellow "TODO" "patch Authentication with fake OIDC client\n"
