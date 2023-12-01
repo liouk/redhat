@@ -25,7 +25,7 @@ step () {
 kubectl patch clusterversion version --type="merge" --patch="$(cat <<- EOF
 spec:
   overrides:
-  - group: config.openshift.io
+  - group: apiextensions.k8s.io
     kind: CustomResourceDefinition
     name: authentications.config.openshift.io
     namespace: ""
@@ -54,14 +54,22 @@ crd_file="$HOME/redhat/repos/stlaz/api/config/v1/0000_10_config-operator_01_auth
 echo "New CRD file: $crd_file"
 read -p "Enter or new: " user_inp
 [[ -n "$user_inp" ]] && crd_file="$user_inp"
-echo "Will apply '$crd_file'"
-kubectl apply -f "$crd_file"
-step "deploy new Authentication CRD\n"
+if [ -f "$crd_file" ]; then
+	echo "Will apply '$crd_file'"
+	kubectl apply -f "$crd_file"
+	step "deploy new Authentication CRD\n"
+elif [[ "$user_inp" == "q" ]]; then
+	yellow "SKIP" "deploy new Authentication CRD\n"
+else
+	red "FAIL" "deploy new Authentication CRD\n"
+	exit 1
+fi
 
 # give required permissions to the console-operator SA
 # as seen in https://github.com/openshift/console-operator/pull/811
-kubectl -n openshift-config-managed get role console-operator -oyaml | grep -q secrets || \
-kubectl -n openshift-config-managed patch role console-operator --type="json" --patch="$(cat <<- EOF
+kubectl -n openshift-config-managed get role console-operator -oyaml | grep -q secrets
+if [ $? -ne 0 ]; then
+	kubectl -n openshift-config-managed patch role console-operator --type="json" --patch="$(cat <<- EOF
 [
   {
     "op": "add",
@@ -74,10 +82,15 @@ kubectl -n openshift-config-managed patch role console-operator --type="json" --
   }
 ]
 EOF
-)"
-step "update openshift-config-managed role console-operator\n"
-kubectl get clusterrole console-operator -oyaml | grep -q authentications || \
-kubectl patch clusterrole console-operator --type="json" --patch="$(cat <<- EOF
+	)"
+	step "update openshift-config-managed role console-operator\n"
+else
+	yellow "SKIP" "update openshift-config-managed role console-operator\n"
+fi
+
+kubectl get clusterrole console-operator -oyaml | grep -q authentications
+if [ $? -ne 0 ]; then
+	kubectl patch clusterrole console-operator --type="json" --patch="$(cat <<- EOF
 [
   {
     "op": "replace",
@@ -114,11 +127,16 @@ kubectl patch clusterrole console-operator --type="json" --patch="$(cat <<- EOF
   }
 ]
 EOF
-)"
-step "patch clusterrole console-operator\n"
+	)"
+	step "patch clusterrole console-operator\n"
+else
+	yellow "SKIP" "patch clusterrole console-operator\n"
+fi
 
 # update authentication CR with type oidc and fake oidc provider
-patch="$(cat <<- EOF
+kubectl get authentication cluster -oyaml | grep -q myoidc
+if [ $? -ne 0 ]; then
+	kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
 spec:
   type: OIDC
   webhookTokenAuthenticator:
@@ -128,22 +146,59 @@ spec:
       issuerURL: https://meh.tld
       audiences: ['openshift-aud']
 EOF
-)"
-kubectl patch authentication cluster --type="merge" -p "$patch"
-step "patch Authentication with type OIDC and OIDCProvider\n"
-
-echo stop && exit
+	)"
+	step "patch Authentication with type OIDC and OIDCProvider\n"
+else
+	yellow "SKIP" "patch Authentication with type OIDC and OIDCProvider\n"
+fi
 
 # set console-operator image
-read -p "console-operator image: " img
-echo "image: $img"
-kubectl -n openshift-console-operator set image deployment/console-operator console-operator="$img"
-step "override console-operator image\n"
+read -p "console-operator image (empty skips): " img
+if [[ -n "$img" ]]; then
+	echo "image: $img"
+	kubectl -n openshift-console-operator set image deployment/console-operator console-operator="$img"
+	step "override console-operator image\n"
+else
+	yellow "SKIP" "override console-operator image\n"
+fi
+
+echo stop && exit
+read -p "Continue?" user_inp
 
 # at this point the operator aborts configuration of OIDC as there is no oidc client configured; what remains
 # is to create an oauthclient suitable for OIDC and configure it in the Authentication CR so that the operator
 # picks it up
 
-yellow "TODO" "create fake OIDC client\n"
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+	namespace: openshift-config
+	name: oidc-client-secret
+data:
+	clientSecret: somesecret
+---
+apiVersion: oauth.openshift.io/v1
+grantMethod: auto
+kind: OAuthClient
+metadata:
+  name: oidc-client
+redirectURIs:
+- https://meh.tld
+respondWithChallenges: true
+EOF
+step "create fake OIDC client and secret\n"
 
-yellow "TODO" "patch Authentication with fake OIDC client\n"
+
+kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
+spec:
+  oidcProviders:
+  - name: myoidc
+		oidcClients:
+		- clientID: oidc-client
+			componentNamespace: openshift-console
+			componentName: console
+			clientSecret: oidc-client-secret
+EOF
+)"
+step "patch Authentication with fake OIDC client\n"
