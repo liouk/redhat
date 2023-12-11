@@ -103,6 +103,11 @@ if [ $? -ne 0 ]; then
   },
   {
     "op": "add",
+    "path": "/rules/3/resources/-",
+    "value": "authentications"
+  },
+  {
+    "op": "add",
     "path": "/rules/-",
     "value": {
       "apiGroups": ["oauth.openshift.io"],
@@ -110,11 +115,6 @@ if [ $? -ne 0 ]; then
       "verbs": ["update"],
       "resourceNames": ["console"]
     }
-  },
-  {
-    "op": "add",
-    "path": "/rules/2/resources/-",
-    "value": "authentications"
   },
   {
     "op": "add",
@@ -162,43 +162,31 @@ else
 	yellow "SKIP" "override console-operator image\n"
 fi
 
-echo stop && exit
-read -p "Continue?" user_inp
+read -p "Continue? " user_inp
 
 # at this point the operator aborts configuration of OIDC as there is no oidc client configured; what remains
 # is to create an oauthclient suitable for OIDC and configure it in the Authentication CR so that the operator
 # picks it up
 
-cat <<EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-	namespace: openshift-config
-	name: oidc-client-secret
-data:
-	clientSecret: somesecret
----
-apiVersion: oauth.openshift.io/v1
-grantMethod: auto
-kind: OAuthClient
-metadata:
-  name: oidc-client
-redirectURIs:
-- https://meh.tld
-respondWithChallenges: true
-EOF
-step "create fake OIDC client and secret\n"
-
-
-kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
+kubectl get authentication cluster -oyaml | grep -q myoidc-client
+if [ $? -ne 0 ]; then
+  kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
 spec:
   oidcProviders:
   - name: myoidc
-		oidcClients:
-		- clientID: oidc-client
-			componentNamespace: openshift-console
-			componentName: console
-			clientSecret: oidc-client-secret
+    issuer:
+      issuerURL: https://meh.tld
+      audiences:
+        - openshift-aud
+    oidcClients:
+    - clientID: myoidc-client
+      componentName: console
+      componentNamespace: openshift-console
+      clientSecret:
+        name: myoidc-client-secret
 EOF
-)"
-step "patch Authentication with fake OIDC client\n"
+  )"
+  step "patch Authentication with fake OIDC client\n"
+else
+  yellow "SKIP" "patch Authentication with fake OIDC client\n"
+fi
