@@ -22,14 +22,10 @@ step () {
 }
 
 # CVO overrides
+read -p "Continue to CVO overrides?" user_inp
 kubectl patch clusterversion version --type="merge" --patch="$(cat <<- EOF
 spec:
   overrides:
-  - group: apiextensions.k8s.io
-    kind: CustomResourceDefinition
-    name: authentications.config.openshift.io
-    namespace: ""
-    unmanaged: true
   - group: rbac.authorization.k8s.io
     kind: Role
     name: console-operator
@@ -47,23 +43,14 @@ spec:
     unmanaged: true
 EOF
 )"
-step "CVO overrides: authentication CRD, console-operator deployment, console-operator roles\n"
+step "CVO overrides: console-operator deployment, console-operator roles\n"
 
-# deploy new CRD
-crd_file="$HOME/redhat/repos/stlaz/api/config/v1/0000_10_config-operator_01_authentication.crd-TechPreviewNoUpgrade.yaml"
-echo "New CRD file: $crd_file"
-read -p "Enter or new: " user_inp
-[[ -n "$user_inp" ]] && crd_file="$user_inp"
-if [ -f "$crd_file" ]; then
-	echo "Will apply '$crd_file'"
-	kubectl apply -f "$crd_file"
-	step "deploy new Authentication CRD\n"
-elif [[ "$user_inp" == "q" ]]; then
-	yellow "SKIP" "deploy new Authentication CRD\n"
-else
-	red "FAIL" "deploy new Authentication CRD\n"
-	exit 1
-fi
+read -p "Enable featuregate?" user_inp
+# oc edit featuregate/cluster
+# spec:
+#   featureSet: TechPreviewNoUpgrade
+
+read -p "Patch console-operator role?" user_inp
 
 # give required permissions to the console-operator SA
 # as seen in https://github.com/openshift/console-operator/pull/811
@@ -87,6 +74,8 @@ EOF
 else
 	yellow "SKIP" "update openshift-config-managed role console-operator\n"
 fi
+
+read -p "Patch console-operator cluster role?" user_inp
 
 kubectl get clusterrole console-operator -oyaml | grep -q authentications
 if [ $? -ne 0 ]; then
@@ -133,25 +122,6 @@ else
 	yellow "SKIP" "patch clusterrole console-operator\n"
 fi
 
-# update authentication CR with type oidc and fake oidc provider
-kubectl get authentication cluster -oyaml | grep -q myoidc
-if [ $? -ne 0 ]; then
-	kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
-spec:
-  type: OIDC
-  webhookTokenAuthenticator:
-  oidcProviders:
-  - name: myoidc
-    issuer:
-      issuerURL: https://meh.tld
-      audiences: ['openshift-aud']
-EOF
-	)"
-	step "patch Authentication with type OIDC and OIDCProvider\n"
-else
-	yellow "SKIP" "patch Authentication with type OIDC and OIDCProvider\n"
-fi
-
 # set console-operator image
 read -p "console-operator image (empty skips): " img
 if [[ -n "$img" ]]; then
@@ -162,11 +132,26 @@ else
 	yellow "SKIP" "override console-operator image\n"
 fi
 
-read -p "Continue? " user_inp
+# at this point the operator aborts configuration of OIDC as there is no oidc provider/client configured; what remains
+# is to configure it in the Authentication CR so that the operator picks it up
 
-# at this point the operator aborts configuration of OIDC as there is no oidc client configured; what remains
-# is to create an oauthclient suitable for OIDC and configure it in the Authentication CR so that the operator
-# picks it up
+read -p "Continue to change auth type to OIDC? " user_inp
+
+# update authentication CR with type oidc and fake oidc provider
+kubectl get authentication cluster -oyaml | grep -q myoidc
+if [ $? -ne 0 ]; then
+	kubectl patch authentication cluster --type="merge" -p "$(cat <<- EOF
+spec:
+  type: OIDC
+  webhookTokenAuthenticator:
+EOF
+	)"
+	step "patch Authentication with type OIDC\n"
+else
+	yellow "SKIP" "patch Authentication with type OIDC\n"
+fi
+
+read -p "Continue to patch auth CR with the OIDC client config? " user_inp
 
 kubectl get authentication cluster -oyaml | grep -q myoidc-client
 if [ $? -ne 0 ]; then
@@ -186,7 +171,25 @@ spec:
         name: myoidc-client-secret
 EOF
   )"
-  step "patch Authentication with fake OIDC client\n"
+  step "patch Authentication with fake OIDC provider and client\n"
 else
-  yellow "SKIP" "patch Authentication with fake OIDC client\n"
+  yellow "SKIP" "patch Authentication with fake OIDC provider and client\n"
+fi
+
+read -p "Continue to create the OIDC client secret? " user_inp
+
+kubectl -n openshift-config get secret myoidc-client-secret 2>&1 >/dev/null
+if [ $? -ne 0 ]; then
+  cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: openshift-config
+  name: myoidc-client-secret
+data:
+  clientSecret: c2VjcmV0Cg==
+EOF
+  step "create OIDC client secret\n"
+else
+  yellow "SKIP" "create OIDC client secret\n"
 fi
