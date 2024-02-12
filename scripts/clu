@@ -67,6 +67,14 @@ COMMANDS
 EOF
 }
 
+# verify docker login to registry.ci.openshift.org
+ci_login () {
+  echo
+  echo "Checking docker login to registry.ci.openshift.org"
+  docker login registry.ci.openshift.org
+  echo
+}
+
 # verify aws login and show confirmation prompt
 aws_login () {
   echo
@@ -320,7 +328,7 @@ cmd_create () {
     exit 1
   fi
 
-  aws_login && create_openshift_cluster "$arg_interactive_config" "$arg_release_image_override"
+  ci_login && aws_login && create_openshift_cluster "$arg_interactive_config" "$arg_release_image_override"
 }
 
 cmd_destroy () {
