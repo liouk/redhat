@@ -46,9 +46,11 @@ EOF
 step "CVO overrides: console-operator deployment, console-operator roles\n"
 
 read -p "Enable featuregate?" user_inp
-# oc edit featuregate/cluster
-# spec:
-#   featureSet: TechPreviewNoUpgrade
+cat <<EOF
+oc edit featuregate/cluster
+spec:
+  featureSet: TechPreviewNoUpgrade
+EOF
 
 read -p "Patch console-operator role?" user_inp
 
@@ -94,6 +96,11 @@ if [ $? -ne 0 ]; then
     "op": "add",
     "path": "/rules/3/resources/-",
     "value": "authentications"
+  },
+  {
+    "op": "add",
+    "path": "/rules/3/resources/-",
+    "value": "featuregates"
   },
   {
     "op": "add",
