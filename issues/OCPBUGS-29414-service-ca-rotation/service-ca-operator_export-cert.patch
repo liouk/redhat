@@ -1,0 +1,16 @@
+diff --git a/test/util/rotate.go b/test/util/rotate.go
+index 8b2f1b79..08e2cf98 100644
+--- a/test/util/rotate.go
++++ b/test/util/rotate.go
+@@ -57,6 +57,11 @@ func CheckRotation(t *testing.T, dnsName string, oldCertPEM, oldKeyPEM, oldBundl
+ // checkClientTrust verifies that a server configured with the provided cert and key will be
+ // trusted by a client with the given bundle.
+ func checkClientTrust(t *testing.T, testName, dnsName string, certPEM, keyPEM, bundlePEM []byte) {
++	if testName == "Server rotated" {
++		os.WriteFile("cert.pem", certPEM, 0644)
++		os.WriteFile("key.pem", keyPEM, 0644)
++		os.WriteFile("ca.pem", bundlePEM, 0644)
++	}
+ 	// Emulate how a service will consume the serving cert by writing
+ 	// the cert and key to disk.
+ 	certFile, err := ioutil.TempFile("", v1.TLSCertKey)
