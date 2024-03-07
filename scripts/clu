@@ -27,43 +27,67 @@ usage () {
 Manipulate openshift clusters.
 
 COMMANDS
-    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override] [--pub]
+    create [-n|--name <string>] [-v|--ocp-version <string>] [-i|--interactive-config] [-l|--list-versions] [--img-override] [--pub] [--template <file>]
         Create a new cluster on AWS using openshift-install.
+
+        -n, --name <string>
+          Define cluster name.
+
+        -v, --ocp-version <string>
+          Specify the version to install (required).
+
+        -i, --interactive-config
+          Create a new config template interactively.
+
+        -l, --list-versions
+          List available installer versions.
+
+        --img-override
+          Override the payload used with the specified image.
+
+        --pub
+          Use public repositories to fetch images from.
+
+        --template
+          Specify which template file to use instead of using the predefined one for the OCP version.
 
     destroy [-v|--ocp-version <string>] [-d|--dir <path>]
         Select and destroy an existing cluster using openshift-install.
 
-        -d|--dir <path>
+        -v, --ocp-version <string>
+          Specify the version to destroy (required).
+
+        -d, --dir <path>
           Specify the directory of the cluster to destroy.
 
     config [-d|--delete]
         Choose a cluster configuration and export it to KUBECONFIG.
 
-        -d,--delete
+        -d, --delete
           Delete existing cluster configurations.
 
     clean [-i|--installers] [-t|--templates]
         Delete installers and/or templates. If -i/-it are not provided, this command will
         delete all installers and templates.
 
-        -i,--installers
-            Delete installers only.
+        -i, --installers
+          Delete installers only.
 
-        -t,--templates
-            Delete templates only.
+        -t, --templates
+          Delete templates only.
 
     installer [-v|--ocp-version <string>] [--pub]
         Download the openshift-install binary.
         Releases: $ocp_releases_url
 
-        -v,--ocp-version <string>
+        -v, --ocp-version <string>
           Specify the version to install (required).
 
         --pub
           Use the public mirror instead of the CI which is the default.
 
     -h, --help, help, usage
-        Print this usage message.
+      Print this usage message.
 EOF
 }
 
@@ -98,13 +122,17 @@ op_signin() {
 create_openshift_cluster () {
   local interactive_config="$1"
   local release_image_override="$2"
+  local template_file="$3"
   local platform="aws"
   local ocp_version_short=$(echo $ocp_version | cut -f1,2 -d'.')
-  local template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version_short}.yaml"
+
+  if [ -z "$template_file" ]; then
+    template_file="${OCP_CLUSTER_CONFIG_TEMPLATES_DIR}/install-config_${platform}_v${ocp_version_short}.yaml"
+  fi
 
   if [ -n "$interactive_config" ] || [ ! -f "$template_file" ]; then
     if [ ! -f "$template_file" ]; then
-      echo "No template found for $platform/$ocp_version_short"
+      echo "Template not found for $platform/$ocp_version_short (tried '$template_file')"
     fi
     echo -e "Will create interactive install configuration\n"
     $openshift_installer --dir="$OCP_CLUSTER_CONFIG_DIR/tmp-interactive" create install-config
@@ -270,6 +298,7 @@ cmd_create () {
   local arg_version=
   local arg_interactive_config=
   local arg_pub=
+  local arg_template=
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -n|--name)
@@ -306,6 +335,11 @@ cmd_create () {
         arg_pub="--pub"
         shift
         ;;
+      --template)
+        arg_template="$2"
+        shift
+        shift
+        ;;
       *)
         echo "Error: unknown argument '$1' for command 'create'"
         usage
@@ -328,7 +362,7 @@ cmd_create () {
     exit 1
   fi
 
-  ci_login && aws_login && create_openshift_cluster "$arg_interactive_config" "$arg_release_image_override"
+  ci_login && aws_login && create_openshift_cluster "$arg_interactive_config" "$arg_release_image_override" "$arg_template"
 }
 
 cmd_destroy () {
