@@ -16,23 +16,25 @@ patch_cluster-policy-controller () {
 }
 
 patch_cluster-authentication-operator () {
-  kubectl -n openshift-authentication-operator \
-    set image deployment/authentication-operator \
-    authentication-operator="$IMG"
-
-  kubectl -n openshift-authentication-operator \
-    get deployment authentication-operator \
-    -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image"
+  update_deployment_image "openshift-authentication-operator" "authentication-operator" "authentication-operator" "0"
 }
 
 patch_console-operator () {
-  kubectl -n openshift-console-operator \
-    set image deployment/console-operator \
-    console-operator="$IMG"
+  update_deployment_image "openshift-console-operator" "console-operator" "console-operator" "0"
+}
 
-  kubectl -n openshift-console-operator \
-    get deployment console-operator \
-    -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image"
+patch_oauth-apiserver () {
+  kubectl get deployment -n {openshift-,}authentication-operator -o json \
+    | jq ".spec.template.spec.containers[0].env[1].value = \"$IMG\"" \
+    | kubectl replace -f -
+
+  kubectl get deployment -n {openshift-,}authentication-operator -o json \
+    | jq "
+    {
+      containers: {
+        name: .spec.template.spec.containers[0].name,
+        env: .spec.template.spec.containers[0].env[1]}
+    }"
 }
 
 patch_oauth-server () {
@@ -56,6 +58,16 @@ patch_kube-apiserver-operator () {
   local env_var_idx=0
 
   update_operand_image "$container" "$container_idx" "$env_var" "$env_var_idx"
+}
+
+update_deployment_image () {
+  ns="$1"
+  deployment="$2"
+  container="$3"
+  idx="$4"
+
+  kubectl -n $ns set image deployment/$deployment $container="$IMG"
+  kubectl -n $ns get deployment $deployment -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[$idx].image"
 }
 
 update_operand_image () {
