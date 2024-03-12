@@ -94,7 +94,7 @@ EOF
 # verify docker login to registry.ci.openshift.org
 ci_login () {
   echo
-  echo "Checking docker login to registry.ci.openshift.org"
+  echo "Checking docker login to registry.ci.openshift.org (abort if prompted)"
   docker login registry.ci.openshift.org
   echo
 }
@@ -145,7 +145,6 @@ create_openshift_cluster () {
     create_cluster_config_template "$template_file" "$cluster_path/install-config.yaml" "$cluster_name"
 
   elif [ -f "$template_file" ]; then
-    echo -e "Will use template:\n  $template_file\n"
     local pull_secret=
     if command -v op &> /dev/null; then
       op_signin
@@ -172,6 +171,7 @@ create_openshift_cluster () {
   echo -e "* Cluster name:    $cluster_name"
   echo -e "* OCP Version:     $ocp_version"
   echo -e "* Installer:       $openshift_installer"
+  echo -e "* Template:        $template_file"
   echo -e "* Config dir:      $cluster_path"
   echo -e "* Image override:  $release_image_override\n"
   read -p "Proceed? [yN] " yn
