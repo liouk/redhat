@@ -1,0 +1,51 @@
+additionalTrustBundlePolicy: Proxyonly
+apiVersion: v1
+baseDomain: group-b.devcluster.openshift.com
+compute:
+- architecture: amd64
+  hyperthreading: Enabled
+  name: worker
+  platform: {}
+  replicas: 3
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  platform: {}
+  replicas: 3
+capabilities:
+  # all v4.15 capabilities except ImageRegistry
+  baselineCapabilitySet: None
+  additionalEnabledCapabilities:
+  - Build
+  - CSISnapshot
+  - CloudCredential
+  - Console
+  - DeploymentConfig
+  - Insights
+  - MachineAPI
+  - NodeTuning
+  - OperatorLifecycleManager
+  - Storage
+  - baremetal
+  - marketplace
+  - openshift-samples
+metadata:
+  creationTimestamp: null
+  name: $CLUSTER_NAME
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: 10.0.0.0/16
+  networkType: OVNKubernetes
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  aws:
+    region: us-west-1
+publish: External
+pullSecret: $PULL_SECRET
+sshKey: |
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF99VZNDA9z0gyoUG2SDhXhQKPUREAiQwi5RCXYc0gz5 irinis@redhat.com
