@@ -6,3 +6,6 @@ repos/
 
 # ocp cluser configs dir
 .openshift_clusters/
+
+# payload source dir
+payload-src/
