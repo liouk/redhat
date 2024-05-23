@@ -11,15 +11,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
-
-const (
-	v415 = "4.15"
-	v416 = "4.16"
-	v417 = "4.17"
-)
-
-var versions = []string{v415, v416, v417}
 
 type SippyTest struct {
 	Name             string `json:"name"`
@@ -51,7 +44,37 @@ func (ns *nsProgress) prsForVersion(version string) []string {
 	return ns.prsPerVersion[version].prs
 }
 
-var out io.Writer
+type stats struct {
+	numPRs                    int
+	numOpenPRs                int
+	numNS                     int
+	numDoneNS                 int
+	numNoFixNeededNS          int
+	numRemainingRunlevelNS    int
+	numRemainingNonRunlevelNS int
+}
+
+const (
+	v415 = "4.15"
+	v416 = "4.16"
+	v417 = "4.17"
+)
+
+var (
+	out io.Writer
+
+	versions = []string{v415, v416, v417}
+
+	uniquePRs = map[string]struct{}{}
+
+	versionStats = map[string]*stats{
+		v415: {},
+		v416: {},
+		v417: {},
+	}
+
+	untestedNS = map[string]struct{}{}
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -73,17 +96,40 @@ func main() {
 		}
 	}
 
+	for _, v := range versions {
+		vstats := versionStats[v]
+		vstats.numNS += len(progressPerNs)
+	}
+
 	fmt.Println("checking status of namespaces")
 	for nsName, ns := range progressPerNs {
+		prevDone := false
 		for _, v := range versions {
-			if ns.prsPerVersion[v].done {
+			vstats := versionStats[v]
+			vstats.numPRs += len(ns.prsPerVersion[v].prs)
+			for _, pr := range ns.prsPerVersion[v].prs {
+				uniquePRs[pr] = struct{}{}
+			}
+
+			if ns.noFixNeeded {
+				vstats.numNoFixNeededNS++
 				continue
+			} else if ns.prsPerVersion[v].done || prevDone {
+				vstats.numDoneNS++
+				prevDone = true
+				continue
+			}
+
+			if ns.runlevel == "yes" {
+				vstats.numRemainingRunlevelNS++
+			} else {
+				vstats.numRemainingNonRunlevelNS++
 			}
 
 			allMerged := true
 			for _, pr := range ns.prsPerVersion[v].prs {
-				status := prStatus(pr)
-				if status == "OPEN" {
+				if prStatus(pr) == "OPEN" {
+					vstats.numOpenPRs += 1
 					allMerged = false
 					break
 				}
@@ -93,6 +139,11 @@ func main() {
 				fmt.Printf("* all v%s PRs of %s have been closed\n", v, nsName)
 			}
 		}
+	}
+
+	for _, v := range versions {
+		vstats := versionStats[v]
+		vstats.numPRs = len(uniquePRs)
 	}
 
 	fmt.Println("\nreading sippy tests")
@@ -106,22 +157,26 @@ func main() {
 		return cmp.Compare(a.CurrentFlakes, b.CurrentFlakes)
 	})
 
+	for ns, _ := range progressPerNs {
+		untestedNS[ns] = struct{}{}
+	}
+
 	runlevel := make([]*SippyTest, 0)
 	nonRunlevel := make([]*SippyTest, 0)
 	unknownRunlevel := make([]*SippyTest, 0)
 	for _, t := range tests {
 		t.Namespace = getNamespace(t.Name)
-		fmt.Println("*", t.Namespace)
+		delete(untestedNS, t.Namespace)
 
 		ns := progressPerNs[t.Namespace]
 
 		if ns.noFixNeeded && t.CurrentFlakes > 0 {
-			fmt.Println("  > no fix needed but is flaking")
+			fmt.Printf("* %s: no fix needed but is flaking\n", t.Namespace)
 		}
 
 		if ns.runlevel == "unknown" {
 			ns.runlevel = getRunlevel(t.Namespace)
-			fmt.Println("  > runlevel:", ns.runlevel)
+			fmt.Printf("* %s runlevel for ns %s\n", ns.runlevel, t.Namespace)
 		}
 
 		switch ns.runlevel {
@@ -131,17 +186,16 @@ func main() {
 			runlevel = append(runlevel, t)
 		case "no", "":
 			nonRunlevel = append(nonRunlevel, t)
+		default:
+			panic(fmt.Sprintf("unexpected runlevel string: %s", ns.runlevel))
 		}
 	}
 
 	header := "|  #  | Component | Namespace | # Runs | # Successes | # Flakes | # Failures | 4.17 | 4.16 | 4.15 |"
 	subhdr := "| --- | --------- | --------- | ------ | ----------- | -------- | ---------- | ---- | ---- | ---- |"
 
-	if len(os.Args) > 2 {
-		fmt.Printf("writing results to: %s\n", os.Args[2])
-	}
-
-	fmt.Fprintf(out, "%s\n", stats())
+	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
+	fmt.Fprintf(out, "%s\n", getStats())
 	fmt.Fprintln(out, "## Non-runlevel")
 	fmt.Fprintln(out, header)
 	fmt.Fprintln(out, subhdr)
@@ -161,6 +215,15 @@ func main() {
 	fmt.Fprintln(out, subhdr)
 	for i, t := range unknownRunlevel {
 		print(i, t)
+	}
+
+	fmt.Fprintln(out, "\n## Untested NS")
+	fmt.Fprintln(out, header)
+	fmt.Fprintln(out, subhdr)
+	i := 1
+	for ns := range untestedNS {
+		print(i, &SippyTest{Namespace: ns})
+		i++
 	}
 
 	fmt.Fprintln(out, "\n## Jira blob")
@@ -208,8 +271,36 @@ func getRunlevel(ns string) string {
 	return "no"
 }
 
-func stats() string {
-	return ""
+func getStats() string {
+
+	var statsBuf bytes.Buffer
+	statsBuf.WriteString("All [open PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen)\n\n")
+	statsBuf.WriteString("| Version | 4.17 | 4.16 | 4.15 |\n")
+	statsBuf.WriteString("| ------- | ---- | ---- | ---- |\n")
+
+	statsBuf.WriteString(fmt.Sprintf("| open PRs | %d/%d | %d/%d | %d/%d |\n",
+		versionStats[v417].numOpenPRs, versionStats[v417].numPRs,
+		versionStats[v416].numOpenPRs, versionStats[v416].numPRs,
+		versionStats[v415].numOpenPRs, versionStats[v415].numPRs,
+	))
+	statsBuf.WriteString(fmt.Sprintf("| num NS | %d | %d | %d |\n",
+		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
+	))
+	statsBuf.WriteString(fmt.Sprintf("| untested NS | %d | %d | %d |\n",
+		len(untestedNS), len(untestedNS), len(untestedNS),
+	))
+	statsBuf.WriteString(fmt.Sprintf("| ready NS | %d | %d | %d |\n",
+		versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS, versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS, versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS,
+	))
+	// untested namespaces end up being counted as remaining-non-runlevel
+	statsBuf.WriteString(fmt.Sprintf("| remaining non-runlevel NS | %d | %d | %d |\n",
+		versionStats[v417].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v416].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v415].numRemainingNonRunlevelNS-len(untestedNS),
+	))
+	statsBuf.WriteString(fmt.Sprintf("| remaining runlevel NS | %d | %d | %d |\n",
+		versionStats[v417].numRemainingRunlevelNS, versionStats[v416].numRemainingRunlevelNS, versionStats[v415].numRemainingRunlevelNS,
+	))
+
+	return statsBuf.String()
 }
 
 func print(i int, t *SippyTest) {
@@ -219,7 +310,9 @@ func print(i int, t *SippyTest) {
 	prevDone := false
 	for _, v := range versions {
 		status := ""
-		if nsprog.prsPerVersion[v].done {
+		if nsprog.noFixNeeded {
+			status = "ready"
+		} else if nsprog.prsPerVersion[v].done {
 			status = "DONE; "
 		} else if prevDone {
 			status = "n/a"
