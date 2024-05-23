@@ -13,6 +13,14 @@ import (
 	"strings"
 )
 
+const (
+	v415 = "4.15"
+	v416 = "4.16"
+	v417 = "4.17"
+)
+
+var versions = []string{v415, v416, v417}
+
 type SippyTest struct {
 	Name             string `json:"name"`
 	JiraComponent    string `json:"jira_component"`
@@ -24,11 +32,23 @@ type SippyTest struct {
 	Namespace string
 }
 
+type versionProgress struct {
+	done bool
+	prs  []string
+}
+
 type nsProgress struct {
-	prs         []string
-	done        bool
-	runlevel    string
-	noFixNeeded bool
+	prsPerVersion map[string]versionProgress
+	runlevel      string
+	noFixNeeded   bool
+}
+
+func (ns *nsProgress) prsForVersion(version string) []string {
+	if ns.prsPerVersion == nil {
+		return nil
+	}
+
+	return ns.prsPerVersion[version].prs
 }
 
 var out io.Writer
@@ -55,21 +75,23 @@ func main() {
 
 	fmt.Println("checking status of namespaces")
 	for nsName, ns := range progressPerNs {
-		if ns.done {
-			continue
-		}
-
-		allMerged := true
-		for _, pr := range ns.prs {
-			status := prStatus(pr)
-			if status == "OPEN" {
-				allMerged = false
-				break
+		for _, v := range versions {
+			if ns.prsPerVersion[v].done {
+				continue
 			}
-		}
 
-		if len(ns.prs) > 0 && allMerged {
-			fmt.Printf("* all PRs of %s have been closed\n", nsName)
+			allMerged := true
+			for _, pr := range ns.prsPerVersion[v].prs {
+				status := prStatus(pr)
+				if status == "OPEN" {
+					allMerged = false
+					break
+				}
+			}
+
+			if len(ns.prsPerVersion[v].prs) > 0 && allMerged {
+				fmt.Printf("* all v%s PRs of %s have been closed\n", v, nsName)
+			}
 		}
 	}
 
@@ -112,8 +134,8 @@ func main() {
 		}
 	}
 
-	header := "|  #  | Component | Namespace | # Runs | # Successes | # Flakes | # Failures | Status | PRs |"
-	subhdr := "| --- | --------- | --------- | ------ | ----------- | -------- | ---------- | ------ | --- |"
+	header := "|  #  | Component | Namespace | # Runs | # Successes | # Flakes | # Failures | 4.17 | 4.16 | 4.15 |"
+	subhdr := "| --- | --------- | --------- | ------ | ----------- | -------- | ---------- | ---- | ---- | ---- |"
 
 	if len(os.Args) > 2 {
 		fmt.Printf("writing results to: %s\n", os.Args[2])
@@ -187,58 +209,32 @@ func getRunlevel(ns string) string {
 }
 
 func stats() string {
-	cntDone := 0
-	numPRs := 0
-	numRunlevel := 0
-	numRunlevelNotFixed := 0
-	numNoFixNeeded := 0
-	for _, ns := range progressPerNs {
-		if ns.done {
-			cntDone++
-		}
-
-		if ns.runlevel == "yes" {
-			numRunlevel++
-			if !ns.done {
-				numRunlevelNotFixed++
-			}
-		}
-
-		if ns.noFixNeeded {
-			numNoFixNeeded++
-		}
-
-		numPRs += len(ns.prs)
-	}
-
-	totalNS := len(progressPerNs)
-	remaining := totalNS - cntDone - numNoFixNeeded - (numRunlevel - numRunlevelNotFixed)
-	return fmt.Sprintf("%d namespaces, %d PRs\n- fixed: %d\n- already OK: %d\n- total remaining: %d (%d non-runlevel, %d runlevel)\n",
-		totalNS,
-		numPRs,
-		cntDone,
-		numNoFixNeeded,
-		remaining,
-		remaining-numRunlevelNotFixed,
-		numRunlevelNotFixed,
-	)
+	return ""
 }
 
 func print(i int, t *SippyTest) {
 	nsprog := progressPerNs[t.Namespace]
-	prs := []string{}
-	for _, pr := range progressPerNs[t.Namespace].prs {
-		prs = append(prs, fmt.Sprintf("[%s](%s)", prName(pr), pr))
+
+	prLine := map[string]string{v417: "", v416: "", v415: ""}
+	prevDone := false
+	for _, v := range versions {
+		status := ""
+		if nsprog.prsPerVersion[v].done {
+			status = "DONE; "
+		} else if prevDone {
+			status = "n/a"
+		}
+
+		prs := make([]string, 0)
+		for _, pr := range nsprog.prsPerVersion[v].prs {
+			prs = append(prs, fmt.Sprintf("[%s](%s)", prName(pr), pr))
+		}
+
+		prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
+		prevDone = nsprog.prsPerVersion[v].done
 	}
 
-	var status string
-	if nsprog.done {
-		status = "done"
-	} else if nsprog.noFixNeeded {
-		status = "ok"
-	}
-
-	fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %s | %s |\n",
+	fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %s | %s | %s |\n",
 		i+1,
 		t.JiraComponent,
 		t.Namespace,
@@ -246,8 +242,9 @@ func print(i int, t *SippyTest) {
 		t.CurrentSuccesses,
 		t.CurrentFlakes,
 		t.CurrentFailures,
-		status,
-		strings.Join(prs, ", "),
+		prLine[v417],
+		prLine[v416],
+		prLine[v415],
 	)
 }
 
@@ -260,22 +257,34 @@ func jiraBlob() string {
 	slices.Sort(nses)
 
 	var jiraBlob bytes.Buffer
+	jiraBlob.WriteString("||#||namespace||4.17||4.16||4.15||\n")
+
 	for i, ns := range nses {
-		prs := make([]string, 0)
-		for _, pr := range progressPerNs[ns].prs {
-			prs = append(prs, fmt.Sprintf("[%s|%s]", prName(pr), pr))
+		prLine := map[string]string{
+			v417: "",
+			v416: "",
+			v415: "",
 		}
 
-		statusStr := ""
-		if progressPerNs[ns].done {
-			statusStr = "(/)"
+		for _, v := range versions {
+			status := ""
+			if progressPerNs[ns].prsPerVersion[v].done {
+				status = "(/) "
+			}
+
+			prs := make([]string, 0)
+			for _, pr := range progressPerNs[ns].prsPerVersion[v].prs {
+				prs = append(prs, fmt.Sprintf("[%s|%s]", prName(pr), pr))
+			}
+			prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
 		}
 
-		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n",
+		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
 			i+1,
 			ns,
-			strings.Join(prs, ", "),
-			statusStr,
+			prLine[v417],
+			prLine[v416],
+			prLine[v415],
 		))
 	}
 
@@ -287,347 +296,385 @@ func prName(url string) string {
 	return fmt.Sprintf("#%s", parts[len(parts)-1])
 }
 
-var progressPerNs = map[string]*nsProgress{"openshift-controller-manager-operator": {
-	done: true,
-	prs: []string{
-		"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336",
+var progressPerNs = map[string]*nsProgress{
+	"openshift-controller-manager-operator": {
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
+			},
+		},
 	},
-},
 	"openshift-etcd-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-insights": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/insights-operator/pull/915",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
+			},
 		},
 	},
 	"openshift-kube-controller-manager-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-ovn-kubernetes": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-console": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/console-operator/pull/871",
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
+			},
 		},
 	},
 	"openshift-controller-manager": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
+			},
 		},
 	},
 	"openshift-monitoring": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-monitoring-operator/pull/2335",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
+			},
 		},
 	},
 	"openshift-route-controller-manager": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
+			},
 		},
 	},
 	"openshift-cluster-olm-operator": {
 		runlevel: "unknown",
-		done:     true,
-		prs: []string{
-			"https://github.com/openshift/cluster-olm-operator/pull/54",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-olm-operator/pull/54"},
+			},
 		},
 	},
 	"openshift-ingress": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-ingress-operator/pull/1031",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
+			},
 		},
 	},
 	"openshift-kube-apiserver": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-marketplace": {
-		done: true,
-		prs: []string{
-			"https://github.com/operator-framework/operator-marketplace/pull/561",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/561"},
+			},
 		},
 	},
 	"openshift-network-node-identity": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-network-operator/pull/2282",
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
+			},
 		},
 	},
 	"openshift-operator-lifecycle-manager": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/operator-framework-olm/pull/703",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/operator-framework-olm/pull/703"},
+			},
 		},
 	},
 	"openshift-user-workload-monitoring": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-monitoring-operator/pull/2335",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
+			},
 		},
 	},
 	"openshift-config-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-config-operator/pull/410",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/410"},
+			},
 		},
 	},
 	"openshift-kube-storage-version-migrator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
+			},
 		},
 	},
 	"openshift-cloud-credential-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cloud-credential-operator/pull/681",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/681"},
+			},
 		},
 	},
 	"openshift-cluster-storage-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-storage-operator/pull/459",
-			"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/196",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs: []string{
+					"https://github.com/openshift/cluster-storage-operator/pull/459",
+					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/196",
+				},
+			},
 		},
 	},
 	"openshift-machine-config-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/machine-config-operator/pull/4219",
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4219"},
+			},
 		},
 	},
 	"openshift-cloud-controller-manager": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-dns-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-network-diagnostics": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-network-operator/pull/2282",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
+			},
 		},
 	},
 	"openshift-cluster-machine-approver": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-catalogd": {
 		runlevel: "unknown",
-		done:     true,
-		prs: []string{
-			"https://github.com/openshift/operator-framework-catalogd/pull/50",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/50"},
+			},
 		},
 	},
 	"openshift-cloud-controller-manager-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-cluster-node-tuning-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-node-tuning-operator/pull/968",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-node-tuning-operator/pull/968"},
+			},
 		},
 	},
 	"openshift-image-registry": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-image-registry-operator/pull/1008",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1008"},
+			},
 		},
 	},
 	"openshift-ingress-canary": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-ingress-operator/pull/1031",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
+			},
 		},
 	},
 	"openshift-ingress-operator": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-ingress-operator/pull/1031",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
+			},
 		},
 	},
 	"openshift-kube-apiserver-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-authentication": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-authentication-operator/pull/656",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
+			},
 		},
 	},
 	"openshift-service-ca-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/service-ca-operator/pull/235",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/235"},
+			},
 		},
 	},
 	"openshift-oauth-apiserver": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-authentication-operator/pull/656",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
+			},
 		},
 	},
 	"openshift-cloud-network-config-controller": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/cluster-network-operator/pull/2282",
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
+			},
 		},
 	},
 	"openshift-cluster-samples-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-samples-operator/pull/535",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/535"},
+			},
 		},
 	},
 	"openshift-kube-storage-version-migrator-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
+			},
 		},
 	},
 	"openshift-operator-controller": {
 		runlevel: "unknown",
-		done:     true,
-		prs: []string{
-			"https://github.com/openshift/operator-framework-operator-controller/pull/100",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/operator-framework-operator-controller/pull/100"},
+			},
 		},
 	},
 	"openshift-service-ca": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/service-ca-operator/pull/235",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/235"},
+			},
 		},
 	},
 	"openshift-etcd": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-dns": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-cluster-csi-drivers": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/csi-operator/pull/170",
-			"https://github.com/openshift/cluster-storage-operator/pull/459",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs: []string{
+					"https://github.com/openshift/csi-operator/pull/170",
+					"https://github.com/openshift/cluster-storage-operator/pull/459",
+				},
+			},
 		},
 	},
 	"openshift-console-operator": {
-		done: false,
-		prs: []string{
-			"https://github.com/openshift/console-operator/pull/871",
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
+			},
 		},
 	},
 	"openshift-authentication-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-authentication-operator/pull/656",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
+			},
 		},
 	},
 	"openshift-machine-api": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-autoscaler-operator/pull/315",
-			"https://github.com/openshift/cluster-baremetal-operator/pull/407",
-			"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/282",
-			"https://github.com/openshift/machine-api-operator/pull/1220",
-			"https://github.com/openshift/machine-api-provider-nutanix/pull/73",
-			"https://github.com/openshift/cluster-api-provider-alibaba/pull/50",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/cluster-autoscaler-operator/pull/315",
+					"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/282",
+					"https://github.com/openshift/machine-api-operator/pull/1220",
+					"https://github.com/openshift/machine-api-provider-nutanix/pull/73",
+					"https://github.com/openshift/cluster-api-provider-alibaba/pull/50",
+				},
+			},
+			v417: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/cluster-baremetal-operator/pull/407",
+				},
+			},
 		},
 	},
 	"openshift-multus": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-network-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-apiserver-operator": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-openshift-apiserver-operator/pull/573",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-openshift-apiserver-operator/pull/573"},
+			},
 		},
 	},
 	"openshift-kube-scheduler": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-cluster-version": {
-		done: true,
-		prs: []string{
-			"https://github.com/openshift/cluster-version-operator/pull/1038",
+		prsPerVersion: map[string]versionProgress{
+			v416: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1038"},
+			},
 		},
 	},
 	"openshift-kube-scheduler-operator": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-kube-controller-manager": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-platform-operators": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-e2e-loki": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
-	"openshift-kni-infra": {
-		done: false,
-		prs:  []string{},
-	},
-	"openshift-vsphere-infra": {
-		done: false,
-		prs:  []string{},
-	},
+	"openshift-kni-infra":     {},
+	"openshift-vsphere-infra": {},
 	"openshift-ovirt-infra": {
 		noFixNeeded: true,
 	},
-	"openshift-openstack-infra": {
-		done: false,
-		prs:  []string{},
-	},
-	"openshift-nutanix-infra": {
-		done: false,
-		prs:  []string{},
-	},
+	"openshift-openstack-infra": {},
+	"openshift-nutanix-infra":   {},
 	"openshift-cloud-platform-infra": {
 		noFixNeeded: true,
 	},
@@ -636,38 +683,24 @@ var progressPerNs = map[string]*nsProgress{"openshift-controller-manager-operato
 	},
 	"openshift-rukpak": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-metallb-system": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-manila-csi-driver": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-kube-proxy": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-sriov-network-operator": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-cluster-api": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-sdn": {
 		runlevel: "unknown",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-host-network": {
 		noFixNeeded: true,
@@ -680,13 +713,9 @@ var progressPerNs = map[string]*nsProgress{"openshift-controller-manager-operato
 	},
 	"openshift-config": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-config-managed": {
 		runlevel: "yes",
-		done:     false,
-		prs:      []string{},
 	},
 	"openshift-infra": {
 		noFixNeeded: true,
@@ -697,22 +726,20 @@ var progressPerNs = map[string]*nsProgress{"openshift-controller-manager-operato
 	"openshift-node": {
 		noFixNeeded: true,
 	},
-	"default": {
-		done: false,
-		prs:  []string{},
-	},
+	"default": {},
 	"kube-public": {
 		noFixNeeded: true,
 	},
 	"kube-node-lease": {
 		noFixNeeded: true,
 	},
-	"kube-system": {
-		done: false,
-		prs:  []string{},
-	},
+	"kube-system": {},
 	"oc debug node pods": {
-		done: true,
-		prs:  []string{"https://github.com/openshift/oc/pull/1763"},
+		prsPerVersion: map[string]versionProgress{
+			v417: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/oc/pull/1763"},
+			},
+		},
 	},
 }
