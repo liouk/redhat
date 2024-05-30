@@ -192,8 +192,8 @@ func main() {
 		}
 	}
 
-	header := "|  #  | Component | Namespace | # Runs | # Successes | # Flakes | # Failures | 4.17 | 4.16 | 4.15 |"
-	subhdr := "| --- | --------- | --------- | ------ | ----------- | -------- | ---------- | ---- | ---- | ---- |"
+	header := "|  #  | Component | Namespace | # Flakes | 4.17 | 4.16 | 4.15 |"
+	subhdr := "| --- | --------- | --------- | -------- | ---- | ---- | ---- |"
 
 	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
 	fmt.Fprintf(out, "%s\n", getStats())
@@ -328,14 +328,12 @@ func print(i int, t *SippyTest) {
 		prevDone = nsprog.prsPerVersion[v].done
 	}
 
-	fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %s | %s | %s |\n",
+	fmt.Fprintf(out, "| %d | %s | %s | %d/%d | %s | %s | %s |\n",
 		i+1,
 		t.JiraComponent,
 		t.Namespace,
-		t.CurrentRuns,
-		t.CurrentSuccesses,
 		t.CurrentFlakes,
-		t.CurrentFailures,
+		t.CurrentRuns,
 		prLine[v417],
 		prLine[v416],
 		prLine[v415],
