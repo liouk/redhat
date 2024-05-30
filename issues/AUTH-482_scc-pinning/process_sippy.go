@@ -418,8 +418,12 @@ var progressPerNs = map[string]*nsProgress{
 	"openshift-console": {
 		prsPerVersion: map[string]versionProgress{
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
 		},
 	},
@@ -691,8 +695,12 @@ var progressPerNs = map[string]*nsProgress{
 	"openshift-console-operator": {
 		prsPerVersion: map[string]versionProgress{
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
 		},
 	},
