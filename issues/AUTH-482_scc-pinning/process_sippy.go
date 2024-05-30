@@ -462,7 +462,7 @@ var progressPerNs = map[string]*nsProgress{
 	},
 	"openshift-ingress": {
 		prsPerVersion: map[string]versionProgress{
-			v416: {
+			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -544,6 +544,10 @@ var progressPerNs = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4219"},
 			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4384"},
+			},
 		},
 	},
 	"openshift-cloud-controller-manager": {
@@ -554,7 +558,7 @@ var progressPerNs = map[string]*nsProgress{
 	},
 	"openshift-network-diagnostics": {
 		prsPerVersion: map[string]versionProgress{
-			v416: {
+			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
@@ -593,7 +597,7 @@ var progressPerNs = map[string]*nsProgress{
 	},
 	"openshift-ingress-canary": {
 		prsPerVersion: map[string]versionProgress{
-			v416: {
+			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -601,7 +605,7 @@ var progressPerNs = map[string]*nsProgress{
 	},
 	"openshift-ingress-operator": {
 		prsPerVersion: map[string]versionProgress{
-			v416: {
+			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -616,6 +620,10 @@ var progressPerNs = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
+			},
 		},
 	},
 	"openshift-service-ca-operator": {
@@ -624,6 +632,10 @@ var progressPerNs = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/235"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/243"},
+			},
 		},
 	},
 	"openshift-oauth-apiserver": {
@@ -631,6 +643,10 @@ var progressPerNs = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
 			},
 		},
 	},
@@ -673,6 +689,10 @@ var progressPerNs = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/235"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/243"},
+			},
 		},
 	},
 	"openshift-etcd": {
@@ -709,6 +729,10 @@ var progressPerNs = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/656"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
 			},
 		},
 	},
