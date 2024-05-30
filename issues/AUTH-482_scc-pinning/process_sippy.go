@@ -46,7 +46,7 @@ func (ns *nsProgress) prsForVersion(version string) []string {
 
 type stats struct {
 	numPRs                    int
-	numOpenPRs                int
+	openPRs                   map[string]struct{}
 	numNS                     int
 	numDoneNS                 int
 	numNoFixNeededNS          int
@@ -64,8 +64,6 @@ var (
 	out io.Writer
 
 	versions = []string{v415, v416, v417}
-
-	uniquePRs = map[string]struct{}{}
 
 	versionStats = map[string]*stats{
 		v415: {},
@@ -99,14 +97,15 @@ func main() {
 	for _, v := range versions {
 		vstats := versionStats[v]
 		vstats.numNS += len(progressPerNs)
+		vstats.openPRs = make(map[string]struct{})
 	}
 
 	fmt.Println("checking status of namespaces")
+	uniquePRs := map[string]struct{}{}
 	for nsName, ns := range progressPerNs {
 		prevDone := false
 		for _, v := range versions {
 			vstats := versionStats[v]
-			vstats.numPRs += len(ns.prsPerVersion[v].prs)
 			for _, pr := range ns.prsPerVersion[v].prs {
 				uniquePRs[pr] = struct{}{}
 			}
@@ -129,7 +128,7 @@ func main() {
 			allMerged := true
 			for _, pr := range ns.prsPerVersion[v].prs {
 				if prStatus(pr) == "OPEN" {
-					vstats.numOpenPRs += 1
+					vstats.openPRs[pr] = struct{}{}
 					allMerged = false
 					break
 				}
@@ -144,6 +143,8 @@ func main() {
 	for _, v := range versions {
 		vstats := versionStats[v]
 		vstats.numPRs = len(uniquePRs)
+
+		fmt.Println(v, vstats.openPRs)
 	}
 
 	fmt.Println("\nreading sippy tests")
@@ -157,7 +158,7 @@ func main() {
 		return cmp.Compare(a.CurrentFlakes, b.CurrentFlakes)
 	})
 
-	for ns, _ := range progressPerNs {
+	for ns := range progressPerNs {
 		untestedNS[ns] = struct{}{}
 	}
 
@@ -274,14 +275,14 @@ func getRunlevel(ns string) string {
 func getStats() string {
 
 	var statsBuf bytes.Buffer
-	statsBuf.WriteString("[Open PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482)\n\n")
+	statsBuf.WriteString("[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift%20is%3Apr%20is%3Aopen%20AUTH-482%20in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482)\n\n")
 	statsBuf.WriteString("| Version | 4.17 | 4.16 | 4.15 |\n")
 	statsBuf.WriteString("| ------- | ---- | ---- | ---- |\n")
 
 	statsBuf.WriteString(fmt.Sprintf("| open PRs | %d/%d | %d/%d | %d/%d |\n",
-		versionStats[v417].numOpenPRs, versionStats[v417].numPRs,
-		versionStats[v416].numOpenPRs, versionStats[v416].numPRs,
-		versionStats[v415].numOpenPRs, versionStats[v415].numPRs,
+		len(versionStats[v417].openPRs), versionStats[v417].numPRs,
+		len(versionStats[v416].openPRs), versionStats[v416].numPRs,
+		len(versionStats[v415].openPRs), versionStats[v415].numPRs,
 	))
 	statsBuf.WriteString(fmt.Sprintf("| num NS | %d | %d | %d |\n",
 		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
