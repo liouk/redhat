@@ -45,8 +45,9 @@ func (ns *nsProgress) prsForVersion(version string) []string {
 }
 
 type stats struct {
-	numPRs                    int
-	openPRs                   map[string]struct{}
+	allPRs  map[string]struct{}
+	openPRs map[string]struct{}
+
 	numNS                     int
 	numDoneNS                 int
 	numNoFixNeededNS          int
@@ -96,18 +97,17 @@ func main() {
 
 	for _, v := range versions {
 		vstats := versionStats[v]
-		vstats.numNS += len(progressPerNs)
+		vstats.allPRs = make(map[string]struct{})
 		vstats.openPRs = make(map[string]struct{})
 	}
 
 	fmt.Println("checking status of namespaces")
-	uniquePRs := map[string]struct{}{}
 	for nsName, ns := range progressPerNs {
 		prevDone := false
 		for _, v := range versions {
 			vstats := versionStats[v]
 			for _, pr := range ns.prsPerVersion[v].prs {
-				uniquePRs[pr] = struct{}{}
+				vstats.allPRs[pr] = struct{}{}
 			}
 
 			if ns.noFixNeeded {
@@ -138,13 +138,6 @@ func main() {
 				fmt.Printf("* all v%s PRs of %s have been closed\n", v, nsName)
 			}
 		}
-	}
-
-	for _, v := range versions {
-		vstats := versionStats[v]
-		vstats.numPRs = len(uniquePRs)
-
-		fmt.Println(v, vstats.openPRs)
 	}
 
 	fmt.Println("\nreading sippy tests")
@@ -280,9 +273,9 @@ func getStats() string {
 	statsBuf.WriteString("| ------- | ---- | ---- | ---- |\n")
 
 	statsBuf.WriteString(fmt.Sprintf("| open PRs | %d/%d | %d/%d | %d/%d |\n",
-		len(versionStats[v417].openPRs), versionStats[v417].numPRs,
-		len(versionStats[v416].openPRs), versionStats[v416].numPRs,
-		len(versionStats[v415].openPRs), versionStats[v415].numPRs,
+		len(versionStats[v417].openPRs), len(versionStats[v417].allPRs),
+		len(versionStats[v416].openPRs), len(versionStats[v416].allPRs),
+		len(versionStats[v415].openPRs), len(versionStats[v415].allPRs),
 	))
 	statsBuf.WriteString(fmt.Sprintf("| num NS | %d | %d | %d |\n",
 		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
