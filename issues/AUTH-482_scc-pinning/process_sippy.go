@@ -429,7 +429,14 @@ func jiraBlob() string {
 	var jiraBlob bytes.Buffer
 	jiraBlob.WriteString("||#||namespace||4.17||4.16||4.15||\n")
 
-	for i, ns := range nses {
+	i := 1
+	for _, ns := range nses {
+		nsProg := progressPerNS[ns]
+
+		if nsProg.noFixNeeded {
+			continue
+		}
+
 		prLine := map[string]string{
 			v417: "",
 			v416: "",
@@ -437,29 +444,30 @@ func jiraBlob() string {
 		}
 
 		for _, v := range versions {
-			if progressPerNS[ns].perVersion[v] == nil {
+			if nsProg.perVersion[v] == nil {
 				continue
 			}
 
 			status := ""
-			if progressPerNS[ns].perVersion[v].done {
+			if nsProg.perVersion[v].done {
 				status = "(/) "
 			}
 
 			prs := make([]string, 0)
-			for _, pr := range progressPerNS[ns].perVersion[v].prs {
+			for _, pr := range nsProg.perVersion[v].prs {
 				prs = append(prs, fmt.Sprintf("[%s|%s]", prName(pr), pr))
 			}
 			prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
 		}
 
 		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
-			i+1,
+			i,
 			ns,
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
 		))
+		i++
 	}
 
 	return jiraBlob.String()
