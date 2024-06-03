@@ -51,11 +51,12 @@ type stats struct {
 	allPRs  map[string]struct{}
 	openPRs map[string]struct{}
 
-	numNS                     int
-	numDoneNS                 int
-	numNoFixNeededNS          int
-	numRemainingRunlevelNS    int
-	numRemainingNonRunlevelNS int
+	numNS                         int
+	numDoneNS                     int
+	numNoFixNeededNS              int
+	numRemainingRunlevelNS        int
+	numRemainingNonRunlevelNS     int
+	numRemainingUnknownRunlevelNS int
 }
 
 const (
@@ -74,9 +75,9 @@ var (
 	versions = []string{v415, v416, v417}
 
 	versionStats = map[string]*stats{
-		v415: {},
-		v416: {},
-		v417: {},
+		v415: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
+		v416: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
+		v417: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 	}
 )
 
@@ -91,30 +92,23 @@ func main() {
 		}
 	}
 
-	for _, v := range versions {
-		vstats := versionStats[v]
-		vstats.allPRs = make(map[string]struct{})
-		vstats.openPRs = make(map[string]struct{})
-	}
-
 	fmt.Println("checking status of namespaces and PRs")
-	for nsName, ns := range progressPerNs {
+	for nsName, ns := range progressPerNS {
 		prevDone := false
 		for _, v := range versions {
 			vstats := versionStats[v]
+			vstats.numNS = len(progressPerNS)
 
-			if ns.perVersion[v] == nil {
-				continue
-			}
-
-			for _, pr := range ns.perVersion[v].prs {
-				vstats.allPRs[pr] = struct{}{}
+			if ns.perVersion[v] != nil {
+				for _, pr := range ns.perVersion[v].prs {
+					vstats.allPRs[pr] = struct{}{}
+				}
 			}
 
 			if ns.noFixNeeded {
 				vstats.numNoFixNeededNS++
 				continue
-			} else if ns.perVersion[v].done || prevDone {
+			} else if prevDone || (ns.perVersion[v] != nil && ns.perVersion[v].done) {
 				vstats.numDoneNS++
 				prevDone = true
 				continue
@@ -124,6 +118,12 @@ func main() {
 				vstats.numRemainingRunlevelNS++
 			} else if ns.nonRunlevel {
 				vstats.numRemainingNonRunlevelNS++
+			} else {
+				vstats.numRemainingUnknownRunlevelNS++
+			}
+
+			if ns.perVersion[v] == nil {
+				continue
 			}
 
 			allMerged := true
@@ -147,7 +147,7 @@ func main() {
 		sippyTests := sippyTests(v)
 		fmt.Printf("* %d tests for v%s\n", len(sippyTests), v)
 		for _, t := range sippyTests {
-			nsProgress := progressPerNs[t.namespace]
+			nsProgress := progressPerNS[t.namespace]
 			nsProgress.tested = true
 			nsProgress.nsName = t.namespace
 
@@ -176,7 +176,8 @@ func main() {
 	unknownRunlevel := make([]*nsProgress, 0)
 
 	fmt.Println("\nprocessing namespaces and tests")
-	for nsName, ns := range progressPerNs {
+	for nsName, ns := range progressPerNS {
+		ns.nsName = nsName
 		switch {
 		case ns.runlevel:
 			runlevel = append(runlevel, ns)
@@ -392,26 +393,34 @@ func getStats() string {
 	statsBuf.WriteString(fmt.Sprintf("| num NS | %d | %d | %d |\n",
 		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| untested NS | %d | %d | %d |\n",
-		len(untestedNS), len(untestedNS), len(untestedNS),
-	))
 	statsBuf.WriteString(fmt.Sprintf("| ready NS | %d | %d | %d |\n",
 		versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS, versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS, versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS,
 	))
-	// untested namespaces end up being counted as remaining-non-runlevel
-	statsBuf.WriteString(fmt.Sprintf("| remaining non-runlevel NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| remaining NS | %d | %d | %d |\n",
+		versionStats[v417].numNS-(versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS),
+		versionStats[v417].numNS-(versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS),
+		versionStats[v417].numNS-(versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS),
+	))
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel NS | %d | %d | %d |\n",
+		// untested namespaces end up being counted as remaining-non-runlevel
 		versionStats[v417].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v416].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v415].numRemainingNonRunlevelNS-len(untestedNS),
 	))
-	statsBuf.WriteString(fmt.Sprintf("| remaining runlevel NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel NS | %d | %d | %d |\n",
 		versionStats[v417].numRemainingRunlevelNS, versionStats[v416].numRemainingRunlevelNS, versionStats[v415].numRemainingRunlevelNS,
+	))
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining unknown runlevel NS | %d | %d | %d |\n",
+		versionStats[v417].numRemainingUnknownRunlevelNS, versionStats[v416].numRemainingUnknownRunlevelNS, versionStats[v415].numRemainingUnknownRunlevelNS,
+	))
+	statsBuf.WriteString(fmt.Sprintf("| ~ untested NS | %d | %d | %d |\n",
+		len(untestedNS), len(untestedNS), len(untestedNS),
 	))
 
 	return statsBuf.String()
 }
 
 func jiraBlob() string {
-	nses := make([]string, 0, len(progressPerNs))
-	for ns := range progressPerNs {
+	nses := make([]string, 0, len(progressPerNS))
+	for ns := range progressPerNS {
 		nses = append(nses, ns)
 	}
 
@@ -428,17 +437,17 @@ func jiraBlob() string {
 		}
 
 		for _, v := range versions {
-			if progressPerNs[ns].perVersion[v] == nil {
+			if progressPerNS[ns].perVersion[v] == nil {
 				continue
 			}
 
 			status := ""
-			if progressPerNs[ns].perVersion[v].done {
+			if progressPerNS[ns].perVersion[v].done {
 				status = "(/) "
 			}
 
 			prs := make([]string, 0)
-			for _, pr := range progressPerNs[ns].perVersion[v].prs {
+			for _, pr := range progressPerNS[ns].perVersion[v].prs {
 				prs = append(prs, fmt.Sprintf("[%s|%s]", prName(pr), pr))
 			}
 			prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
@@ -461,7 +470,7 @@ func prName(url string) string {
 	return fmt.Sprintf("#%s", parts[len(parts)-1])
 }
 
-var progressPerNs = map[string]*nsProgress{
+var progressPerNS = map[string]*nsProgress{
 	"openshift-controller-manager-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
