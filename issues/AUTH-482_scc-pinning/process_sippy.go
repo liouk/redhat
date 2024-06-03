@@ -381,7 +381,7 @@ func getRunlevel(ns string) (runlevel bool, nonRunlevel bool) {
 func getStats() string {
 
 	var statsBuf bytes.Buffer
-	statsBuf.WriteString("[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift%20is%3Apr%20is%3Aopen%20AUTH-482%20in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
+	statsBuf.WriteString("[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
 	statsBuf.WriteString("| Version | 4.17 | 4.16 | 4.15 |\n")
 	statsBuf.WriteString("| ------- | ---- | ---- | ---- |\n")
 
