@@ -654,6 +654,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4384"},
 			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4393"},
+			},
 		},
 	},
 	"openshift-cloud-controller-manager": {
