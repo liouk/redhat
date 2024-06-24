@@ -547,8 +547,7 @@ var progressPerNS = map[string]*nsProgress{
 		},
 	},
 	"openshift-cluster-olm-operator": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v416: {
 				done: true,
@@ -679,8 +678,7 @@ var progressPerNS = map[string]*nsProgress{
 		runlevel: true,
 	},
 	"openshift-catalogd": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v416: {
 				done: true,
@@ -797,8 +795,7 @@ var progressPerNS = map[string]*nsProgress{
 		},
 	},
 	"openshift-operator-controller": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v416: {
 				done: true,
@@ -949,32 +946,27 @@ var progressPerNS = map[string]*nsProgress{
 		noFixNeeded: true,
 	},
 	"openshift-rukpak": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
 	},
 	"openshift-metallb-system": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
 	},
 	"openshift-manila-csi-driver": {
 		runlevel:    false,
 		nonRunlevel: false,
 	},
 	"openshift-kube-proxy": {
-		runlevel:    false,
-		nonRunlevel: false,
+		runlevel: true,
 	},
 	"openshift-sriov-network-operator": {
 		runlevel:    false,
 		nonRunlevel: false,
 	},
 	"openshift-cluster-api": {
-		runlevel:    false,
-		nonRunlevel: false,
+		runlevel: true,
 	},
 	"openshift-sdn": {
-		runlevel:    false,
-		nonRunlevel: false,
+		runlevel: true,
 	},
 	"openshift-host-network": {
 		nonRunlevel: true,
