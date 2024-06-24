@@ -989,10 +989,12 @@ var progressPerNS = map[string]*nsProgress{
 		noFixNeeded: true,
 	},
 	"openshift-config": {
-		runlevel: true,
+		runlevel:    true,
+		noFixNeeded: true,
 	},
 	"openshift-config-managed": {
-		runlevel: true,
+		runlevel:    true,
+		noFixNeeded: true,
 	},
 	"openshift-infra": {
 		nonRunlevel: true,
@@ -1007,7 +1009,8 @@ var progressPerNS = map[string]*nsProgress{
 		noFixNeeded: true,
 	},
 	"default": {
-		runlevel: true,
+		runlevel:    true,
+		noFixNeeded: true,
 	},
 	"kube-public": {
 		nonRunlevel: true,
