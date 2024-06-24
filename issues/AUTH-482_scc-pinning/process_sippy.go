@@ -914,10 +914,6 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-kube-controller-manager": {
 		runlevel: true,
 	},
-	"openshift-platform-operators": {
-		runlevel:    false,
-		nonRunlevel: false,
-	},
 	"openshift-e2e-loki": {
 		nonRunlevel: true,
 	},
