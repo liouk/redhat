@@ -9,7 +9,7 @@ set -e
 
 # openshift-install from CI
 ocp_releases_url="https://amd64.ocp.releases.ci.openshift.org"
-ocp_release_artifacts_url="https://openshift-release-artifacts.apps.ci.l2s4.p1.openshiftapps.com/"
+ocp_release_artifacts_url="https://openshift-release-artifacts.apps.ci.l2s4.p1.openshiftapps.com"
 
 # openshift-install from public stream
 ocp_releases_pub_url="https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp"
@@ -287,8 +287,9 @@ cmd_installer () {
   done
   ocp_version=$(echo "$ocp_version" | grep "^Name:" | tr -s ' ' | cut -d' ' -f2)
 
-  echo "Downloading installer: ${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz"
-  curl "${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz" --output $ocp_installer_dir/openshift-install.tar.gz
+  installer_url="${ocp_url}/openshift-install-linux-${ocp_version}.tar.gz"
+  echo "Downloading installer: $installer_url"
+  curl "$installer_url" --output $ocp_installer_dir/openshift-install.tar.gz
   tar -xzf $ocp_installer_dir/openshift-install.tar.gz -C $ocp_installer_dir "openshift-install" --transform "s/openshift-install/openshift-install-$ocp_version/"
   rm $ocp_installer_dir/openshift-install.tar.gz
 }
