@@ -1009,7 +1009,7 @@ var progressPerNS = map[string]*nsProgress{
 		noFixNeeded: true,
 	},
 	"kube-system": {
-		nonRunlevel: true,
+		runlevel: true,
 	},
 	"oc debug node pods": {
 		nonRunlevel: true,
