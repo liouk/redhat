@@ -615,7 +615,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/410"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/420"},
 			},
 		},
@@ -903,7 +903,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-openshift-apiserver-operator/pull/573"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-apiserver-operator/pull/581"},
 			},
 		},
