@@ -486,6 +486,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
+			},
 		},
 	},
 	"openshift-etcd-operator": {
@@ -609,6 +613,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/410"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/420"},
 			},
 		},
 	},
