@@ -19,6 +19,7 @@ oc patch featuregate cluster -p '{"spec":{"featureSet":"TechPreviewNoUpgrade"}}'
 # wait for the CRD to be patched
 while [[ "$(get_authn_crd_gen)" -le "$authnCRDGen" ]]; do echo "waiting for Authentication CRD to be updated"; sleep 5s; done
 
+# copy the default-ingress-cert CM to the openshift-config NS so that it can be read by the proxy
 oc patch cm -n openshift-config-managed default-ingress-cert -p '{"metadata":{"namespace":"openshift-config"}}' --dry-run=client -o yaml | oc apply -f -
 oc patch proxy cluster -p '{"spec":{"trustedCA":{"name":"default-ingress-cert"}}}' --type=merge
 
