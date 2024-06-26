@@ -429,6 +429,18 @@ func jiraBlob() string {
 	var jiraBlob bytes.Buffer
 	jiraBlob.WriteString("||#||namespace||4.17||4.16||4.15||\n")
 
+	slices.SortStableFunc(nses, func(ns1, ns2 string) int {
+		if progressPerNS[ns1].runlevel {
+			return 1
+		}
+
+		if progressPerNS[ns2].runlevel {
+			return -1
+		}
+
+		return 0
+	})
+
 	i := 1
 	for _, ns := range nses {
 		nsProg := progressPerNS[ns]
@@ -460,9 +472,14 @@ func jiraBlob() string {
 			prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
 		}
 
+		nsName := ns
+		if nsProg.runlevel {
+			nsName = "(runlevel) " + ns
+		}
+
 		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
 			i,
-			ns,
+			nsName,
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
