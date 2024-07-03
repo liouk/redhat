@@ -42,7 +42,6 @@ type nsProgress struct {
 
 	runlevel    bool
 	nonRunlevel bool
-	tested      bool
 
 	noFixNeeded bool
 }
@@ -70,9 +69,13 @@ const (
 var (
 	out = os.Stdout
 
-	untestedNS = []*nsProgress{}
-
 	versions = []string{v415, v416, v417}
+
+	untestedPerVersion = map[string][]string{
+		v415: {},
+		v416: {},
+		v417: {},
+	}
 
 	versionStats = map[string]*stats{
 		v415: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
@@ -148,7 +151,6 @@ func main() {
 		fmt.Printf("* %d tests for v%s\n", len(sippyTests), v)
 		for _, t := range sippyTests {
 			nsProgress := progressPerNS[t.namespace]
-			nsProgress.tested = true
 			nsProgress.nsName = t.namespace
 
 			if len(nsProgress.jiraComponent) > 0 && nsProgress.jiraComponent != t.JiraComponent {
@@ -185,9 +187,6 @@ func main() {
 		case ns.nonRunlevel:
 			nonRunlevel = append(nonRunlevel, ns)
 
-		case !ns.tested:
-			untestedNS = append(untestedNS, ns)
-
 		case !ns.runlevel && !ns.nonRunlevel:
 			unknownRunlevel = append(unknownRunlevel, ns)
 			ns.runlevel, ns.nonRunlevel = getRunlevel(nsName)
@@ -200,7 +199,8 @@ func main() {
 		}
 
 		for _, v := range versions {
-			if ns.perVersion == nil || ns.perVersion[v] == nil {
+			if ns.perVersion == nil || ns.perVersion[v] == nil || ns.perVersion[v].sippyTest == nil {
+				untestedPerVersion[v] = append(untestedPerVersion[v], ns.nsName)
 				continue
 			}
 
@@ -231,9 +231,7 @@ func main() {
 	sortAndPrint(unknownRunlevel)
 
 	fmt.Fprintln(out, "\n## Untested NS")
-	fmt.Fprintln(out, header)
-	fmt.Fprintln(out, subhdr)
-	sortAndPrint(untestedNS)
+	sortAndPrintUntested(out)
 
 	fmt.Fprintln(out, "\n## Jira blob")
 	fmt.Fprintf(out, "```\n%s```", jiraBlob())
@@ -266,6 +264,17 @@ func sippyTests(version string) []*SippyTest {
 	}
 
 	return tests
+}
+
+func sortAndPrintUntested(out *os.File) {
+	for _, v := range versions {
+		fmt.Fprintf(out, "### %s\n", v)
+		fmt.Fprintf(out, "| ns  |\n")
+		fmt.Fprintf(out, "| --- |\n")
+		for _, ns := range untestedPerVersion[v] {
+			fmt.Fprintf(out, "| %s |\n", ns)
+		}
+	}
 }
 
 func sortAndPrint(nsProg []*nsProgress) {
@@ -403,7 +412,7 @@ func getStats() string {
 	))
 	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel NS | %d | %d | %d |\n",
 		// untested namespaces end up being counted as remaining-non-runlevel
-		versionStats[v417].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v416].numRemainingNonRunlevelNS-len(untestedNS), versionStats[v415].numRemainingNonRunlevelNS-len(untestedNS),
+		versionStats[v417].numRemainingNonRunlevelNS, versionStats[v416].numRemainingNonRunlevelNS, versionStats[v415].numRemainingNonRunlevelNS,
 	))
 	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel NS | %d | %d | %d |\n",
 		versionStats[v417].numRemainingRunlevelNS, versionStats[v416].numRemainingRunlevelNS, versionStats[v415].numRemainingRunlevelNS,
@@ -412,7 +421,7 @@ func getStats() string {
 		versionStats[v417].numRemainingUnknownRunlevelNS, versionStats[v416].numRemainingUnknownRunlevelNS, versionStats[v415].numRemainingUnknownRunlevelNS,
 	))
 	statsBuf.WriteString(fmt.Sprintf("| ~ untested NS | %d | %d | %d |\n",
-		len(untestedNS), len(untestedNS), len(untestedNS),
+		len(untestedPerVersion[v417]), len(untestedPerVersion[v416]), len(untestedPerVersion[v415]),
 	))
 
 	return statsBuf.String()
@@ -652,6 +661,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
+			},
 		},
 	},
 	"openshift-cloud-credential-operator": {
@@ -671,6 +684,13 @@ var progressPerNS = map[string]*nsProgress{
 				prs: []string{
 					"https://github.com/openshift/cluster-storage-operator/pull/459",
 					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/196",
+				},
+			},
+			v415: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/cluster-storage-operator/pull/484",
+					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/211",
 				},
 			},
 		},
@@ -737,6 +757,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1008"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1067"},
 			},
 		},
 	},
@@ -825,6 +849,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
+			},
 		},
 	},
 	"openshift-operator-controller": {
@@ -863,6 +891,12 @@ var progressPerNS = map[string]*nsProgress{
 				prs: []string{
 					"https://github.com/openshift/csi-operator/pull/170",
 					"https://github.com/openshift/cluster-storage-operator/pull/459",
+				},
+			},
+			v415: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/cluster-storage-operator/pull/484",
 				},
 			},
 		},
@@ -904,10 +938,11 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/machine-api-operator/pull/1220",
 					"https://github.com/openshift/machine-api-provider-nutanix/pull/73",
 					"https://github.com/openshift/cluster-api-provider-alibaba/pull/50",
+					"https://github.com/openshift/cluster-baremetal-operator/pull/433",
 				},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs: []string{
 					"https://github.com/openshift/cluster-baremetal-operator/pull/407",
 				},
