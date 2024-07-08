@@ -464,14 +464,16 @@ func jiraBlob() string {
 			v415: "",
 		}
 
+		prevDone := false
 		for _, v := range versions {
 			if nsProg.perVersion[v] == nil {
 				continue
 			}
 
 			status := ""
-			if nsProg.perVersion[v].done {
+			if prevDone || nsProg.perVersion[v].done {
 				status = "(/) "
+				prevDone = true
 			}
 
 			prs := make([]string, 0)
@@ -513,7 +515,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
 		},
@@ -557,7 +559,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
 		},
@@ -579,7 +581,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/336"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
 		},
@@ -662,7 +664,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
 			},
 		},
@@ -687,7 +689,7 @@ var progressPerNS = map[string]*nsProgress{
 				},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs: []string{
 					"https://github.com/openshift/cluster-storage-operator/pull/484",
 					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/211",
@@ -850,7 +852,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/107"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
 			},
 		},
@@ -894,7 +896,7 @@ var progressPerNS = map[string]*nsProgress{
 				},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs: []string{
 					"https://github.com/openshift/cluster-storage-operator/pull/484",
 				},
