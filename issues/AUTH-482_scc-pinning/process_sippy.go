@@ -530,6 +530,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/967"},
+			},
 		},
 	},
 	"openshift-kube-controller-manager-operator": {
@@ -980,6 +984,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1038"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1068"},
+			},
 		},
 	},
 	"openshift-kube-scheduler-operator": {
@@ -1091,6 +1099,10 @@ var progressPerNS = map[string]*nsProgress{
 			v417: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/oc/pull/1763"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/oc/pull/1818"},
 			},
 		},
 	},
