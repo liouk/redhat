@@ -29,9 +29,10 @@ type SippyTest struct {
 }
 
 type versionProgress struct {
-	done      bool
-	prs       []string
-	sippyTest *SippyTest
+	done         bool
+	prs          []string
+	sippyTest    *SippyTest
+	wontdoReason string
 }
 
 type nsProgress struct {
@@ -308,6 +309,8 @@ func sortAndPrint(nsProg []*nsProgress) {
 			status := ""
 			if ns.noFixNeeded {
 				status = "ready"
+			} else if len(ns.perVersion[v].wontdoReason) > 0 {
+				status = fmt.Sprintf("wontdo: %s", ns.perVersion[v].wontdoReason)
 			} else if ns.perVersion[v].done {
 				status = "DONE; "
 			} else if prevDone {
@@ -470,6 +473,11 @@ func jiraBlob() string {
 				continue
 			}
 
+			if len(nsProg.perVersion[v].wontdoReason) > 0 {
+				prLine[v] = "n/a"
+				continue
+			}
+
 			status := ""
 			if prevDone || nsProg.perVersion[v].done {
 				status = "(/) "
@@ -531,7 +539,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/967"},
 			},
 		},
@@ -597,6 +605,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-olm-operator/pull/54"},
 			},
+			v415: {
+				done:         true,
+				wontdoReason: "TechPreview",
+			},
 		},
 	},
 	"openshift-ingress": {
@@ -618,6 +630,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/561"},
 			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/570"},
+			},
 		},
 	},
 	"openshift-network-node-identity": {
@@ -636,6 +652,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-olm/pull/703"},
 			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/operator-framework-olm/pull/828"},
+			},
 		},
 	},
 	"openshift-user-workload-monitoring": {
@@ -644,6 +664,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2420"},
 			},
 		},
 	},
@@ -679,6 +703,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/681"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/736"},
 			},
 		},
 	},
@@ -743,6 +771,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/50"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/58"},
+			},
 		},
 	},
 	"openshift-cloud-controller-manager-operator": {
@@ -755,6 +787,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-node-tuning-operator/pull/968"},
 			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-node-tuning-operator/pull/1117"},
+			},
 		},
 	},
 	"openshift-image-registry": {
@@ -765,7 +801,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1008"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1067"},
 			},
 		},
@@ -846,6 +882,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/535"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/548"},
+			},
 		},
 	},
 	"openshift-kube-storage-version-migrator-operator": {
@@ -867,6 +907,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-operator-controller/pull/100"},
+			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/operator-framework-operator-controller/pull/120"},
 			},
 		},
 	},
@@ -985,7 +1029,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1038"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1068"},
 			},
 		},
@@ -1025,20 +1069,37 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-rukpak": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/operator-framework-rukpak/pull/92"},
+			},
+		},
 	},
 	"openshift-metallb-system": {
 		nonRunlevel: true,
 	},
 	"openshift-manila-csi-driver": {
 		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/234"},
+			},
+		},
 	},
 	"openshift-kube-proxy": {
 		runlevel: true,
 	},
 	"openshift-sriov-network-operator": {
-		runlevel:    false,
-		nonRunlevel: false,
+		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/971"},
+			},
+		},
 	},
 	"openshift-cluster-api": {
 		runlevel: true,
@@ -1101,7 +1162,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/oc/pull/1763"},
 			},
 			v416: {
-				done: false,
+				done: true,
+				prs:  []string{"https://github.com/openshift/oc/pull/1816"},
+			},
+			v415: {
+				done: true,
 				prs:  []string{"https://github.com/openshift/oc/pull/1818"},
 			},
 		},
