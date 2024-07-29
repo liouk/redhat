@@ -33,6 +33,7 @@ type versionProgress struct {
 	prs          []string
 	sippyTest    *SippyTest
 	wontdoReason string
+	noFixNeeded  bool
 }
 
 type nsProgress struct {
@@ -313,7 +314,7 @@ func sortAndPrint(nsProg []*nsProgress) {
 				status = fmt.Sprintf("wontdo: %s", ns.perVersion[v].wontdoReason)
 			} else if ns.perVersion[v].done {
 				status = "DONE; "
-			} else if prevDone {
+			} else if prevDone || ns.perVersion[v].noFixNeeded {
 				status = "n/a"
 			}
 
@@ -473,7 +474,7 @@ func jiraBlob() string {
 				continue
 			}
 
-			if len(nsProg.perVersion[v].wontdoReason) > 0 {
+			if len(nsProg.perVersion[v].wontdoReason) > 0 || nsProg.perVersion[v].noFixNeeded {
 				prLine[v] = "n/a"
 				continue
 			}
@@ -607,7 +608,7 @@ var progressPerNS = map[string]*nsProgress{
 			},
 			v415: {
 				done:         true,
-				wontdoReason: "TechPreview",
+				wontdoReason: "TechPreview", // respective feature was on TechPreview on 4.15
 			},
 		},
 	},
@@ -1058,6 +1059,12 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-nutanix-infra": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				// no workloads need fixing in 4.17
+				noFixNeeded: true,
+			},
+		},
 	},
 	"openshift-cloud-platform-infra": {
 		nonRunlevel: true,
