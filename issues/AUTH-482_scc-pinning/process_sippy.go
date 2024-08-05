@@ -559,7 +559,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
 		},
@@ -773,7 +773,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/50"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/58"},
 			},
 		},
@@ -960,7 +960,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/console-operator/pull/871"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
 		},
@@ -1104,7 +1104,7 @@ var progressPerNS = map[string]*nsProgress{
 		perVersion: map[string]*versionProgress{
 			v417: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/971"},
+				prs:  []string{"https://github.com/k8snetworkplumbingwg/sriov-network-operator/pull/754"},
 			},
 		},
 	},
