@@ -14,15 +14,6 @@ prompt () {
   esac
 }
 
-get_ci_token () {
-  echo "Opening to default browser: $request_token_url"
-  xdg-open $request_token_url
-}
-
-ci_login () {
-  docker login $registry_url
-}
-
 op_signin() {
   local op_session_file="$HOME/.config/op/.session-token"
   OP_SESSION=$(cat $op_session_file 2>/dev/null)
@@ -46,11 +37,12 @@ save_pull_secret () {
 
 main () {
   echo -e "### STEP 1: Obtain token for $registry_url"
-  get_ci_token 2>/dev/null
+  echo "Opening to default browser: $request_token_url"
+  xdg-open $request_token_url
   prompt
 
   echo -e "\n### STEP 2: Login to $registry_url"
-  ci_login
+  docker login $registry_url
   prompt
 
   echo -e "\n### STEP 3: Save pull secret to 1password"
