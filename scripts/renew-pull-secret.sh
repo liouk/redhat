@@ -2,8 +2,12 @@
 
 # helper script that performs a login to registry.ci.openshift.org with a new token, then saves ~/.docker/config.json as a pull secret into 1password
 
-registry_url="registry.ci.openshift.org"
-request_token_url="https://oauth-openshift.apps.ci.l2s4.p1.openshiftapps.com/oauth/token/request"
+# registries
+ci_registry_url="registry.ci.openshift.org"
+ci_registry_token_url="https://oauth-openshift.apps.ci.l2s4.p1.openshiftapps.com/oauth/token/request"
+ci_registry_build05_url="registry.build05.ci.openshift.org"
+ci_registry_build05_token_url="https://oauth-openshift.apps.build05.l9oh.p1.openshiftapps.com/oauth/token/request"
+
 docker_config="$HOME/.docker/config.json"
 
 prompt () {
@@ -35,17 +39,25 @@ save_pull_secret () {
   echo "Pull secret saved in $OP_ITEM_OCP_PULL_SECRET"
 }
 
+do_registry () {
+	local url="$1"
+	local token_url="$2"
+
+	echo -e "\n### Registry: $url"
+  echo "Opening to default browser: $token_url"
+  xdg-open $token_url
+
+  echo "Get token from above URL and use it below to login:"
+  docker login $url
+
+  prompt
+}
+
 main () {
-  echo -e "### STEP 1: Obtain token for $registry_url"
-  echo "Opening to default browser: $request_token_url"
-  xdg-open $request_token_url
-  prompt
+	do_registry $ci_registry_url $ci_registry_token_url
+	do_registry $ci_registry_build05_url $ci_registry_build05_token_url
 
-  echo -e "\n### STEP 2: Login to $registry_url"
-  docker login $registry_url
-  prompt
-
-  echo -e "\n### STEP 3: Save pull secret to 1password"
+  echo -e "\n### Save pull secret to 1password"
   save_pull_secret
 }
 
