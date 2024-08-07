@@ -562,6 +562,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/922"},
+			},
 		},
 	},
 	"openshift-controller-manager": {
@@ -963,6 +967,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/908"},
 			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/console-operator/pull/922"},
+			},
 		},
 	},
 	"openshift-authentication-operator": {
@@ -1046,9 +1054,21 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-kni-infra": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+			},
+		},
 	},
 	"openshift-vsphere-infra": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+			},
+		},
 	},
 	"openshift-ovirt-infra": {
 		nonRunlevel: true,
@@ -1056,6 +1076,12 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-openstack-infra": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+			},
+		},
 	},
 	"openshift-nutanix-infra": {
 		nonRunlevel: true,
@@ -1085,14 +1111,28 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-metallb-system": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/metallb-operator/pull/235"},
+			},
+		},
 	},
 	"openshift-manila-csi-driver": {
 		runlevel:    false,
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/234"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/235"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/236"},
 			},
 		},
 	},
