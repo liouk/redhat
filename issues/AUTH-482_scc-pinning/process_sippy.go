@@ -214,9 +214,19 @@ func main() {
 
 	header := "|  #  | Component | Namespace | 4.17 Flakes | 4.16 Flakes | 4.15 Flakes | 4.17 PRs | 4.16 PRs | 4.15 PRs |"
 	subhdr := "| --- | --------- | --------- | ----------- | ----------- | ----------- | -------- | -------- | -------- |"
+	statsStr := getStats()
 
 	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
-	fmt.Fprintf(out, "%s\n", getStats())
+	fmt.Fprint(out, "[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
+
+	fmt.Fprintf(out, "| Num PRs | 4.17 | 4.16 | 4.15 |\n")
+	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| open PRs | %d | %d | %d |\n", len(versionStats[v417].openPRs), len(versionStats[v416].openPRs), len(versionStats[v415].openPRs))
+	fmt.Fprintf(out, "| total PRs | %d | %d | %d |\n\n", len(versionStats[v417].allPRs), len(versionStats[v416].allPRs), len(versionStats[v415].allPRs))
+
+	fmt.Fprintf(out, "| # namespaces | 4.17 | 4.16 | 4.15 |\n")
+	fmt.Fprintf(out, "| ------ | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "%s\n", statsStr)
 	fmt.Fprintln(out, "## Non-runlevel")
 	fmt.Fprintln(out, header)
 	fmt.Fprintln(out, subhdr)
@@ -236,7 +246,7 @@ func main() {
 	sortAndPrintUntested(out)
 
 	fmt.Fprintln(out, "\n## Jira blob")
-	fmt.Fprintf(out, "```\n%s```", jiraBlob())
+	fmt.Fprintf(out, "```\n%s```", jiraBlob(statsStr))
 }
 
 func sippyTests(version string) []*SippyTest {
@@ -392,46 +402,37 @@ func getRunlevel(ns string) (runlevel bool, nonRunlevel bool) {
 }
 
 func getStats() string {
-
 	var statsBuf bytes.Buffer
-	statsBuf.WriteString("[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
-	statsBuf.WriteString("| Version | 4.17 | 4.16 | 4.15 |\n")
-	statsBuf.WriteString("| ------- | ---- | ---- | ---- |\n")
 
-	statsBuf.WriteString(fmt.Sprintf("| open PRs | %d/%d | %d/%d | %d/%d |\n",
-		len(versionStats[v417].openPRs), len(versionStats[v417].allPRs),
-		len(versionStats[v416].openPRs), len(versionStats[v416].allPRs),
-		len(versionStats[v415].openPRs), len(versionStats[v415].allPRs),
-	))
-	statsBuf.WriteString(fmt.Sprintf("| num NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| monitored | %d | %d | %d |\n",
 		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ready NS | %d | %d | %d |\n",
-		versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS, versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS, versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS,
+	statsBuf.WriteString(fmt.Sprintf("| fix needed | %d | %d | %d |\n",
+		versionStats[v417].numNS-versionStats[v417].numNoFixNeededNS, versionStats[v416].numNS-versionStats[v416].numNoFixNeededNS, versionStats[v415].numNS-versionStats[v415].numNoFixNeededNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| remaining NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| fixed | %d | %d | %d |\n",
+		versionStats[v417].numDoneNS, versionStats[v416].numDoneNS, versionStats[v415].numDoneNS,
+	))
+	statsBuf.WriteString(fmt.Sprintf("| remaining | %d | %d | %d |\n",
 		versionStats[v417].numNS-(versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS),
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel | %d | %d | %d |\n",
 		// untested namespaces end up being counted as remaining-non-runlevel
 		versionStats[v417].numRemainingNonRunlevelNS, versionStats[v416].numRemainingNonRunlevelNS, versionStats[v415].numRemainingNonRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel (low-prio) | %d | %d | %d |\n",
 		versionStats[v417].numRemainingRunlevelNS, versionStats[v416].numRemainingRunlevelNS, versionStats[v415].numRemainingRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining unknown runlevel NS | %d | %d | %d |\n",
-		versionStats[v417].numRemainingUnknownRunlevelNS, versionStats[v416].numRemainingUnknownRunlevelNS, versionStats[v415].numRemainingUnknownRunlevelNS,
-	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ untested NS | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ untested | %d | %d | %d |\n",
 		len(untestedPerVersion[v417]), len(untestedPerVersion[v416]), len(untestedPerVersion[v415]),
 	))
 
 	return statsBuf.String()
 }
 
-func jiraBlob() string {
+func jiraBlob(statsStr string) string {
 	nses := make([]string, 0, len(progressPerNS))
 	for ns := range progressPerNS {
 		nses = append(nses, ns)
@@ -440,6 +441,10 @@ func jiraBlob() string {
 	slices.Sort(nses)
 
 	var jiraBlob bytes.Buffer
+	jiraBlob.WriteString("h3. Progress summary\n")
+	jiraBlob.WriteString("|| \\# namespaces || 4.17 || 4.16 || 4.15 ||\n")
+	jiraBlob.WriteString(fmt.Sprintf("%s\n", statsStr))
+	jiraBlob.WriteString("h3. Progress breakdown\n")
 	jiraBlob.WriteString("||#||namespace||4.17||4.16||4.15||\n")
 
 	slices.SortStableFunc(nses, func(ns1, ns2 string) int {
@@ -671,7 +676,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2420"},
 			},
 		},
@@ -710,7 +715,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/681"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/736"},
 			},
 		},
@@ -1143,7 +1148,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/k8snetworkplumbingwg/sriov-network-operator/pull/754"},
 			},
 		},
