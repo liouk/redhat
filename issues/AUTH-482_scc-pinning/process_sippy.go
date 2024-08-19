@@ -84,6 +84,10 @@ var (
 		v416: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v417: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 	}
+
+	ignoreNS = map[string]struct{}{
+		"openshift-rukpak": {}, // see https://github.com/openshift/operator-framework-rukpak/pull/92#issuecomment-2286534684
+	}
 )
 
 func main() {
@@ -152,6 +156,10 @@ func main() {
 		sippyTests := sippyTests(v)
 		fmt.Printf("* %d tests for v%s\n", len(sippyTests), v)
 		for _, t := range sippyTests {
+			if _, ignore := ignoreNS[t.namespace]; ignore {
+				continue
+			}
+
 			nsProgress := progressPerNS[t.namespace]
 			nsProgress.nsName = t.namespace
 
@@ -1105,11 +1113,6 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		noFixNeeded: true,
 	},
-	// see https://github.com/openshift/operator-framework-rukpak/pull/92#issuecomment-2286534684
-	// "openshift-rukpak": {
-	// 	nonRunlevel: true,
-	// 	noFixNeeded: true,
-	// },
 	"openshift-metallb-system": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
@@ -1128,7 +1131,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/234"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/235"},
 			},
 			v415: {
