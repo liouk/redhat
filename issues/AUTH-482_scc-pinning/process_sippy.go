@@ -569,7 +569,7 @@ var progressPerNS = map[string]*nsProgress{
 			},
 			v415: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/console-operator/pull/922"},
+				prs:  []string{"https://github.com/openshift/console-operator/pull/924"},
 			},
 		},
 	},
@@ -974,7 +974,7 @@ var progressPerNS = map[string]*nsProgress{
 			},
 			v415: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/console-operator/pull/922"},
+				prs:  []string{"https://github.com/openshift/console-operator/pull/924"},
 			},
 		},
 	},
@@ -995,7 +995,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v416: {
-				done: false,
+				done: true,
 				prs: []string{
 					"https://github.com/openshift/cluster-autoscaler-operator/pull/315",
 					"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/282",
@@ -1105,21 +1105,17 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		noFixNeeded: true,
 	},
-	"openshift-rukpak": {
-		nonRunlevel: true,
-		perVersion: map[string]*versionProgress{
-			v417: {
-				done: false,
-				prs:  []string{"https://github.com/openshift/operator-framework-rukpak/pull/92"},
-			},
-		},
-	},
+	// see https://github.com/openshift/operator-framework-rukpak/pull/92#issuecomment-2286534684
+	// "openshift-rukpak": {
+	// 	nonRunlevel: true,
+	// 	noFixNeeded: true,
+	// },
 	"openshift-metallb-system": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v417: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/metallb-operator/pull/235"},
+				prs:  []string{"https://github.com/openshift/metallb-operator/pull/238"},
 			},
 		},
 	},
