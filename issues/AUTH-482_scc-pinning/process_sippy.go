@@ -64,6 +64,7 @@ const (
 	v415 = "4.15"
 	v416 = "4.16"
 	v417 = "4.17"
+	v418 = "4.18"
 
 	sippyFilter = `{"items":[{"columnField":"name","operatorValue":"starts with","value":"[sig-auth] all workloads in ns/"},{"columnField":"name","operatorValue":"ends with","value":"must set the 'openshift.io/required-scc' annotation"}],"linkOperator":"and"}`
 )
@@ -71,24 +72,36 @@ const (
 var (
 	out = os.Stdout
 
-	versions = []string{v415, v416, v417}
+	versions = []string{v415, v416, v417, v418}
 
 	untestedPerVersion = map[string][]string{
 		v415: {},
 		v416: {},
 		v417: {},
+		v418: {},
 	}
 
 	versionStats = map[string]*stats{
 		v415: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v416: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v417: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
+		v418: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 	}
 
 	ignoreNS = map[string]struct{}{
 		"openshift-rukpak": {}, // see https://github.com/openshift/operator-framework-rukpak/pull/92#issuecomment-2286534684
 	}
+
+	branchedAt417 time.Time
 )
+
+func init() {
+	zh, err := time.LoadLocation("Europe/Zurich")
+	if err != nil {
+		panic(err)
+	}
+	branchedAt417 = time.Date(2024, 8, 10, 0, 0, 0, 0, zh)
+}
 
 func main() {
 
@@ -112,6 +125,16 @@ func main() {
 				for _, pr := range ns.perVersion[v].prs {
 					vstats.allPRs[pr] = struct{}{}
 				}
+
+				// check which PRs merged after 4.17
+				// if v == v417 {
+				// 	for _, pr := range ns.perVersion[v].prs {
+				// 		mergedAt := prMergedAt(pr)
+				// 		if !mergedAt.IsZero() && mergedAt.After(branchedAt417) {
+				// 			fmt.Printf("* merged after v4.17: %s (mergedAt = %s)\n", pr, mergedAt)
+				// 		}
+				// 	}
+				// }
 			}
 
 			if ns.noFixNeeded {
@@ -138,6 +161,10 @@ func main() {
 			allMerged := true
 			for _, pr := range ns.perVersion[v].prs {
 				if prStatus(pr) == "OPEN" {
+					// warn about 4.17 PRs that will now merge on 4.18
+					// if v == v417 {
+					// 	fmt.Printf("* v4.17 PR should be promoted to 4.18: %s\n", pr)
+					// }
 					vstats.openPRs[pr] = struct{}{}
 					allMerged = false
 					break
@@ -220,20 +247,20 @@ func main() {
 		}
 	}
 
-	header := "|  #  | Component | Namespace | 4.17 Flakes | 4.16 Flakes | 4.15 Flakes | 4.17 PRs | 4.16 PRs | 4.15 PRs |"
-	subhdr := "| --- | --------- | --------- | ----------- | ----------- | ----------- | -------- | -------- | -------- |"
+	header := "|  #  | Component | Namespace | 4.18 Flakes | 4.17 Flakes | 4.16 Flakes | 4.15 Flakes | 4.18 PRs | 4.17 PRs | 4.16 PRs | 4.15 PRs |"
+	subhdr := "| --- | --------- | --------- | ----------- | ----------- | ----------- | ----------- | -------- | -------- | -------- | -------- |"
 	statsStr := getStats()
 
 	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
 	fmt.Fprint(out, "[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
 
-	fmt.Fprintf(out, "| Num PRs | 4.17 | 4.16 | 4.15 |\n")
-	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- |\n")
-	fmt.Fprintf(out, "| open PRs | %d | %d | %d |\n", len(versionStats[v417].openPRs), len(versionStats[v416].openPRs), len(versionStats[v415].openPRs))
-	fmt.Fprintf(out, "| total PRs | %d | %d | %d |\n\n", len(versionStats[v417].allPRs), len(versionStats[v416].allPRs), len(versionStats[v415].allPRs))
+	fmt.Fprintf(out, "| Num PRs | 4.18 | 4.17 | 4.16 | 4.15 |\n")
+	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| open PRs | %d | %d | %d | %d |\n", len(versionStats[v418].openPRs), len(versionStats[v417].openPRs), len(versionStats[v416].openPRs), len(versionStats[v415].openPRs))
+	fmt.Fprintf(out, "| total PRs | %d | %d | %d | %d |\n\n", len(versionStats[v418].allPRs), len(versionStats[v417].allPRs), len(versionStats[v416].allPRs), len(versionStats[v415].allPRs))
 
-	fmt.Fprintf(out, "| # namespaces | 4.17 | 4.16 | 4.15 |\n")
-	fmt.Fprintf(out, "| ------ | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| # namespaces | 4.18 | 4.17 | 4.16 | 4.15 |\n")
+	fmt.Fprintf(out, "| ------ | ---- | ---- | ---- | ---- |\n")
 	fmt.Fprintf(out, "%s\n", statsStr)
 	fmt.Fprintln(out, "## Non-runlevel")
 	fmt.Fprintln(out, header)
@@ -318,7 +345,7 @@ func sortAndPrint(nsProg []*nsProgress) {
 	})
 
 	for i, ns := range nsProg {
-		prLine := map[string]string{v417: "", v416: "", v415: ""}
+		prLine := map[string]string{v418: "", v417: "", v416: "", v415: ""}
 		prevDone := false
 		for _, v := range versions {
 			if ns.perVersion == nil || ns.perVersion[v] == nil {
@@ -353,18 +380,47 @@ func sortAndPrint(nsProg []*nsProgress) {
 			}
 		}
 
-		fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %s | %s | %s |\n",
+		fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %s | %s | %s | %s |\n",
 			i+1,
 			ns.jiraComponent,
 			ns.nsName,
+			flakes[v418],
 			flakes[v417],
 			flakes[v416],
 			flakes[v415],
+			prLine[v418],
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
 		)
 	}
+}
+
+func prMergedAt(url string) time.Time {
+	matches := regexp.MustCompile(`https\:\/\/github\.com\/(.*)\/pull\/(\d+)`).FindStringSubmatch(url)
+	if len(matches) != 3 {
+		panic("bad PR url format: " + url)
+	}
+
+	var out, stderr strings.Builder
+	cmd := exec.Command("gh", "pr", "view", matches[2], "--repo", matches[1], "--json", "mergedAt", "-q", ".mergedAt")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		panic(fmt.Errorf("cmd '%s' failed with error: %s", cmd.String(), stderr.String()))
+	}
+
+	mergedAtStr := strings.TrimSpace(out.String())
+	if len(mergedAtStr) == 0 {
+		return time.Time{}
+	}
+
+	mergedAt, err := time.Parse("2006-01-02T15:04:05Z", mergedAtStr)
+	if err != nil {
+		panic(fmt.Errorf("couldn't parse time string '%s': %v", mergedAtStr, err))
+	}
+
+	return mergedAt
 }
 
 func prStatus(url string) string {
@@ -412,29 +468,45 @@ func getRunlevel(ns string) (runlevel bool, nonRunlevel bool) {
 func getStats() string {
 	var statsBuf bytes.Buffer
 
-	statsBuf.WriteString(fmt.Sprintf("| monitored | %d | %d | %d |\n",
-		versionStats[v417].numNS, versionStats[v416].numNS, versionStats[v415].numNS,
+	statsBuf.WriteString(fmt.Sprintf("| monitored | %d | %d | %d | %d |\n",
+		versionStats[v418].numNS,
+		versionStats[v417].numNS,
+		versionStats[v416].numNS,
+		versionStats[v415].numNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| fix needed | %d | %d | %d |\n",
-		versionStats[v417].numNS-versionStats[v417].numNoFixNeededNS, versionStats[v416].numNS-versionStats[v416].numNoFixNeededNS, versionStats[v415].numNS-versionStats[v415].numNoFixNeededNS,
+	statsBuf.WriteString(fmt.Sprintf("| fix needed | %d | %d | %d | %d |\n",
+		versionStats[v418].numNS-versionStats[v418].numNoFixNeededNS,
+		versionStats[v417].numNS-versionStats[v417].numNoFixNeededNS,
+		versionStats[v416].numNS-versionStats[v416].numNoFixNeededNS,
+		versionStats[v415].numNS-versionStats[v415].numNoFixNeededNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| fixed | %d | %d | %d |\n",
-		versionStats[v417].numDoneNS, versionStats[v416].numDoneNS, versionStats[v415].numDoneNS,
+	statsBuf.WriteString(fmt.Sprintf("| fixed | %d | %d | %d | %d |\n",
+		versionStats[v418].numDoneNS, versionStats[v417].numDoneNS, versionStats[v416].numDoneNS, versionStats[v415].numDoneNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| remaining | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| remaining | %d | %d | %d | %d |\n",
+		versionStats[v418].numNS-(versionStats[v418].numDoneNS+versionStats[v418].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS),
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel | %d | %d | %d | %d |\n",
 		// untested namespaces end up being counted as remaining-non-runlevel
-		versionStats[v417].numRemainingNonRunlevelNS, versionStats[v416].numRemainingNonRunlevelNS, versionStats[v415].numRemainingNonRunlevelNS,
+		versionStats[v418].numRemainingNonRunlevelNS,
+		versionStats[v417].numRemainingNonRunlevelNS,
+		versionStats[v416].numRemainingNonRunlevelNS,
+		versionStats[v415].numRemainingNonRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel (low-prio) | %d | %d | %d |\n",
-		versionStats[v417].numRemainingRunlevelNS, versionStats[v416].numRemainingRunlevelNS, versionStats[v415].numRemainingRunlevelNS,
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel (low-prio) | %d | %d | %d | %d |\n",
+		versionStats[v418].numRemainingRunlevelNS,
+		versionStats[v417].numRemainingRunlevelNS,
+		versionStats[v416].numRemainingRunlevelNS,
+		versionStats[v415].numRemainingRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ untested | %d | %d | %d |\n",
-		len(untestedPerVersion[v417]), len(untestedPerVersion[v416]), len(untestedPerVersion[v415]),
+	statsBuf.WriteString(fmt.Sprintf("| ~ untested | %d | %d | %d | %d |\n",
+		len(untestedPerVersion[v418]),
+		len(untestedPerVersion[v417]),
+		len(untestedPerVersion[v416]),
+		len(untestedPerVersion[v415]),
 	))
 
 	return statsBuf.String()
@@ -450,10 +522,10 @@ func jiraBlob(statsStr string) string {
 
 	var jiraBlob bytes.Buffer
 	jiraBlob.WriteString("h3. Progress summary\n")
-	jiraBlob.WriteString("|| \\# namespaces || 4.17 || 4.16 || 4.15 ||\n")
+	jiraBlob.WriteString("|| \\# namespaces || 4.18 || 4.17 || 4.16 || 4.15 ||\n")
 	jiraBlob.WriteString(fmt.Sprintf("%s\n", statsStr))
 	jiraBlob.WriteString("h3. Progress breakdown\n")
-	jiraBlob.WriteString("||#||namespace||4.17||4.16||4.15||\n")
+	jiraBlob.WriteString("||#||namespace||4.18||4.17||4.16||4.15||\n")
 
 	slices.SortStableFunc(nses, func(ns1, ns2 string) int {
 		if progressPerNS[ns1].runlevel {
@@ -476,6 +548,7 @@ func jiraBlob(statsStr string) string {
 		}
 
 		prLine := map[string]string{
+			v418: "",
 			v417: "",
 			v416: "",
 			v415: "",
@@ -484,6 +557,9 @@ func jiraBlob(statsStr string) string {
 		prevDone := false
 		for _, v := range versions {
 			if nsProg.perVersion[v] == nil {
+				if prevDone {
+					prLine[v] = "(/) "
+				}
 				continue
 			}
 
@@ -510,9 +586,10 @@ func jiraBlob(statsStr string) string {
 			nsName = "(runlevel) " + ns
 		}
 
-		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
+		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s | %s |\n",
 			i,
 			nsName,
+			prLine[v418],
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
@@ -632,7 +709,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-ingress": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -657,7 +734,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-network-node-identity": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
@@ -773,7 +850,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-network-diagnostics": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
@@ -827,7 +904,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-ingress-canary": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -836,7 +913,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-ingress-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
@@ -887,7 +964,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cloud-network-config-controller": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
@@ -1068,8 +1145,8 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-kni-infra": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
-				done: false,
+			v418: {
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 		},
@@ -1077,8 +1154,8 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-vsphere-infra": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
-				done: false,
+			v418: {
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 		},
@@ -1090,8 +1167,8 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-openstack-infra": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
-				done: false,
+			v418: {
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 		},
@@ -1116,7 +1193,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-metallb-system": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v417: {
+			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/238"},
 			},
