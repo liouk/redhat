@@ -726,6 +726,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
 			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2420"},
+			},
 		},
 	},
 	"openshift-route-controller-manager": {
@@ -1197,6 +1201,18 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
+			},
 		},
 	},
 	"openshift-vsphere-infra": {
@@ -1205,6 +1221,18 @@ var progressPerNS = map[string]*nsProgress{
 			v418: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+			},
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
 	},
@@ -1218,6 +1246,18 @@ var progressPerNS = map[string]*nsProgress{
 			v418: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+			},
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
 	},
