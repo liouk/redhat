@@ -735,7 +735,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 		},
@@ -851,7 +851,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 		},
@@ -965,7 +965,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 		},
@@ -978,7 +978,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/535"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/548"},
 			},
 		},
