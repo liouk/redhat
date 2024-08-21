@@ -1244,12 +1244,10 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: true,
-				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+				wontdoReason: "does not exist",
 			},
 			v417: {
-				done: false,
-				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
+				wontdoReason: "does not exist",
 			},
 			v416: {
 				done: false,
@@ -1265,12 +1263,19 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				// no workloads need fixing in 4.18
-				noFixNeeded: true,
+				done: false,
 			},
 			v417: {
 				// no workloads need fixing in 4.17
 				noFixNeeded: true,
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
+			},
+			v415: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
 	},
