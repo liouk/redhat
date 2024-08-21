@@ -179,6 +179,18 @@ func main() {
 
 	fmt.Println("\nretrieving sippy tests")
 	cntTotalTests := 0
+	versionTestStats := map[string]*struct {
+		total     int
+		successes int
+		flakes    int
+		failures  int
+	}{
+		v415: {},
+		v416: {},
+		v417: {},
+		v418: {},
+	}
+
 	for _, v := range versions {
 		sippyTests := sippyTests(v)
 		fmt.Printf("* %d tests for v%s\n", len(sippyTests), v)
@@ -189,6 +201,15 @@ func main() {
 
 			nsProgress := progressPerNS[t.namespace]
 			nsProgress.nsName = t.namespace
+
+			// count only non-runlevel NS tests
+			if nsProgress.nonRunlevel {
+				testStats := versionTestStats[v]
+				testStats.total += t.CurrentRuns
+				testStats.successes += t.CurrentSuccesses
+				testStats.flakes += t.CurrentFlakes
+				testStats.failures += t.CurrentFailures
+			}
 
 			if len(nsProgress.jiraComponent) > 0 && nsProgress.jiraComponent != t.JiraComponent {
 				panic(fmt.Sprintf("jira component changed for ns '%s' from '%s' to '%s'", t.namespace, nsProgress.jiraComponent, t.JiraComponent))
@@ -253,6 +274,33 @@ func main() {
 
 	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
 	fmt.Fprint(out, "[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
+
+	fmt.Fprintf(out, "| Tests | 4.18 | 4.17 | 4.16 | 4.15 |\n")
+	fmt.Fprintf(out, "| ----- | ---- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| total runs | %d | %d | %d | %d |\n",
+		versionTestStats[v418].total,
+		versionTestStats[v417].total,
+		versionTestStats[v416].total,
+		versionTestStats[v415].total,
+	)
+	fmt.Fprintf(out, "| successes | %d | %d | %d | %d |\n",
+		versionTestStats[v418].successes,
+		versionTestStats[v417].successes,
+		versionTestStats[v416].successes,
+		versionTestStats[v415].successes,
+	)
+	fmt.Fprintf(out, "| flakes | %d | %d | %d | %d |\n",
+		versionTestStats[v418].flakes,
+		versionTestStats[v417].flakes,
+		versionTestStats[v416].flakes,
+		versionTestStats[v415].flakes,
+	)
+	fmt.Fprintf(out, "| failures | %d | %d | %d | %d |\n\n",
+		versionTestStats[v418].failures,
+		versionTestStats[v417].failures,
+		versionTestStats[v416].failures,
+		versionTestStats[v415].failures,
+	)
 
 	fmt.Fprintf(out, "| Num PRs | 4.18 | 4.17 | 4.16 | 4.15 |\n")
 	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- | ---- |\n")
@@ -1176,6 +1224,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-nutanix-infra": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {
+				// no workloads need fixing in 4.18
+				noFixNeeded: true,
+			},
 			v417: {
 				// no workloads need fixing in 4.17
 				noFixNeeded: true,
