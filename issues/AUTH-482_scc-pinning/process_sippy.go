@@ -195,11 +195,12 @@ func main() {
 		sippyTests := sippyTests(v)
 		fmt.Printf("* %d tests for v%s\n", len(sippyTests), v)
 		for _, t := range sippyTests {
-			if _, ignore := ignoreNS[t.namespace]; ignore {
+			nsProgress := progressPerNS[t.namespace]
+
+			if _, ignore := ignoreNS[t.namespace]; ignore || nsProgress == nil {
 				continue
 			}
 
-			nsProgress := progressPerNS[t.namespace]
 			nsProgress.nsName = t.namespace
 
 			// count only non-runlevel NS tests
@@ -1291,7 +1292,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/238"},
 			},
 		},
@@ -1309,7 +1310,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/235"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/236"},
 			},
 		},
