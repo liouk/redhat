@@ -1298,6 +1298,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/238"},
 			},
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/metallb-operator/pull/240"},
+			},
 		},
 	},
 	"openshift-manila-csi-driver": {
