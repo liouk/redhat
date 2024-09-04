@@ -1203,11 +1203,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
@@ -1224,11 +1224,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
@@ -1253,7 +1253,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
@@ -1274,7 +1274,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
@@ -1326,7 +1326,14 @@ var progressPerNS = map[string]*nsProgress{
 		perVersion: map[string]*versionProgress{
 			v417: {
 				done: true,
-				prs:  []string{"https://github.com/k8snetworkplumbingwg/sriov-network-operator/pull/754"},
+				prs: []string{
+					"https://github.com/k8snetworkplumbingwg/sriov-network-operator/pull/754",
+					"https://github.com/openshift/sriov-network-operator/pull/995",
+				},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/999"},
 			},
 		},
 	},
