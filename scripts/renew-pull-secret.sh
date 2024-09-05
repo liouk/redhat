@@ -5,6 +5,8 @@
 # registries
 ci_registry_url="registry.ci.openshift.org"
 ci_registry_token_url="https://oauth-openshift.apps.ci.l2s4.p1.openshiftapps.com/oauth/token/request"
+ci_registry_build01_url="registry.build01.ci.openshift.org"
+ci_registry_build01_token_url="https://oauth-openshift.apps.build01.ci.devcluster.openshift.com/oauth/token/request"
 ci_registry_build05_url="registry.build05.ci.openshift.org"
 ci_registry_build05_token_url="https://oauth-openshift.apps.build05.l9oh.p1.openshiftapps.com/oauth/token/request"
 
@@ -44,17 +46,23 @@ do_registry () {
 	local token_url="$2"
 
 	echo -e "\n### Registry: $url"
+
+  read -p "Proceed? [yN] " yn
+  case $yn in
+    y|yes) ;;
+    *) return;;
+  esac
+
   echo "Opening to default browser: $token_url"
   xdg-open $token_url
 
   echo "Get token from above URL and use it below to login:"
   docker login $url
-
-  prompt
 }
 
 main () {
 	do_registry $ci_registry_url $ci_registry_token_url
+	do_registry $ci_registry_build01_url $ci_registry_build01_token_url
 	do_registry $ci_registry_build05_url $ci_registry_build05_token_url
 
   echo -e "\n### Save pull secret to 1password"
