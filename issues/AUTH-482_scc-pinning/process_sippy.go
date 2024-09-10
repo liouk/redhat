@@ -795,6 +795,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
+			},
 		},
 	},
 	"openshift-operator-lifecycle-manager": {
@@ -915,6 +919,10 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
+			},
 		},
 	},
 	"openshift-cluster-machine-approver": {
@@ -1032,6 +1040,10 @@ var progressPerNS = map[string]*nsProgress{
 			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
 	},
@@ -1313,6 +1325,10 @@ var progressPerNS = map[string]*nsProgress{
 			v417: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/240"},
+			},
+			v416: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/metallb-operator/pull/241"},
 			},
 		},
 	},
