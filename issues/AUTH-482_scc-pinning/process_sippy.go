@@ -1223,7 +1223,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
@@ -1244,7 +1244,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
@@ -1269,7 +1269,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
@@ -1290,7 +1290,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4539"},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
 		},
@@ -1311,7 +1311,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/238"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/240"},
 			},
 		},
@@ -1348,7 +1348,7 @@ var progressPerNS = map[string]*nsProgress{
 				},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/999"},
 			},
 		},
