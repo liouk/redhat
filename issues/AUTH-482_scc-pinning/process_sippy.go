@@ -792,11 +792,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -916,11 +916,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -1038,11 +1038,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -1156,6 +1156,12 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-machine-api": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v417: {
+				done: true,
+				prs: []string{
+					"https://github.com/openshift/cluster-baremetal-operator/pull/407",
+				},
+			},
 			v416: {
 				done: true,
 				prs: []string{
@@ -1167,10 +1173,15 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/cluster-baremetal-operator/pull/433",
 				},
 			},
-			v417: {
-				done: true,
+			v415: {
+				done: false,
 				prs: []string{
-					"https://github.com/openshift/cluster-baremetal-operator/pull/407",
+					"https://github.com/openshift/cluster-autoscaler-operator/pull/332",
+					"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/326",
+					"https://github.com/openshift/machine-api-operator/pull/1288",
+					"https://github.com/openshift/machine-api-provider-nutanix/pull/81",
+					"https://github.com/openshift/cluster-api-provider-alibaba/pull/57",
+					"https://github.com/openshift/cluster-baremetal-operator/pull/443",
 				},
 			},
 		},
