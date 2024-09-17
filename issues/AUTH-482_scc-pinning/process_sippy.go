@@ -1229,6 +1229,12 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-e2e-loki": {
 		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/release/pull/56579"},
+			},
+		},
 	},
 	"openshift-kni-infra": {
 		nonRunlevel: true,
@@ -1377,6 +1383,10 @@ var progressPerNS = map[string]*nsProgress{
 			v416: {
 				done: true,
 				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/999"},
+			},
+			v415: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/1003"},
 			},
 		},
 	},
