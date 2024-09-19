@@ -1231,7 +1231,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/release/pull/56579"},
 			},
 		},
