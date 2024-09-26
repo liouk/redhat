@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-k8s-probes
+spec:
+  containers:
+  - name: test-k8s-probes
+    image: quay.io/rh_ee_irinis/test-k8s-probes:latest
+    livenessProbe:
+      httpGet:
+        path: /livez
+        port: 8080
+      periodSeconds: 2
+      timeoutSeconds: 10
+      failureThreshold: 3
