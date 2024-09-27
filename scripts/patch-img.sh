@@ -54,7 +54,7 @@ patch_oauth-server () {
 patch_kube-apiserver-operator () {
   local container="kube-apiserver-operator"
   local container_idx=0
-  local env_var="IMAGE"
+  local env_var="OPERATOR_IMAGE"
   local env_var_idx=0
 
   update_operand_image "$container" "$container_idx" "$env_var" "$env_var_idx"
