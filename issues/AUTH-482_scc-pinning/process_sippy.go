@@ -121,6 +121,18 @@ func main() {
 			vstats := versionStats[v]
 			vstats.numNS = len(progressPerNS)
 
+			if ns.perVersion == nil {
+				ns.perVersion = make(map[string]*versionProgress)
+			}
+
+			if ns.perVersion[v] == nil {
+				ns.perVersion[v] = &versionProgress{}
+				// mark next versions as done
+				if prevDone {
+					ns.perVersion[v].done = true
+				}
+			}
+
 			if ns.perVersion[v] != nil {
 				for _, pr := range ns.perVersion[v].prs {
 					vstats.allPRs[pr] = struct{}{}
@@ -140,7 +152,7 @@ func main() {
 			if ns.noFixNeeded {
 				vstats.numNoFixNeededNS++
 				continue
-			} else if prevDone || (ns.perVersion[v] != nil && ns.perVersion[v].done) {
+			} else if ns.perVersion[v] != nil && ns.perVersion[v].done {
 				vstats.numDoneNS++
 				prevDone = true
 				continue
@@ -261,6 +273,10 @@ func main() {
 			if ns.perVersion == nil || ns.perVersion[v] == nil || ns.perVersion[v].sippyTest == nil {
 				untestedPerVersion[v] = append(untestedPerVersion[v], ns.nsName)
 				continue
+			}
+
+			if ns.perVersion[v].done && ns.perVersion[v].sippyTest.CurrentFlakes > 0 {
+				fmt.Printf("* %s %s: namespace completed but is flaking\n", v, nsName)
 			}
 
 			if ns.noFixNeeded && ns.perVersion[v].sippyTest.CurrentFlakes > 0 {
@@ -395,7 +411,6 @@ func sortAndPrint(nsProg []*nsProgress) {
 
 	for i, ns := range nsProg {
 		prLine := map[string]string{v418: "", v417: "", v416: "", v415: ""}
-		prevDone := false
 		for _, v := range versions {
 			if ns.perVersion == nil || ns.perVersion[v] == nil {
 				continue
@@ -408,7 +423,7 @@ func sortAndPrint(nsProg []*nsProgress) {
 				status = fmt.Sprintf("wontdo: %s", ns.perVersion[v].wontdoReason)
 			} else if ns.perVersion[v].done {
 				status = "DONE; "
-			} else if prevDone || ns.perVersion[v].noFixNeeded {
+			} else if ns.perVersion[v].noFixNeeded {
 				status = "n/a"
 			}
 
@@ -418,7 +433,6 @@ func sortAndPrint(nsProg []*nsProgress) {
 			}
 
 			prLine[v] = fmt.Sprintf("%s%s", status, strings.Join(prs, " "))
-			prevDone = ns.perVersion[v].done
 		}
 
 		flakes := make(map[string]int)
@@ -603,12 +617,8 @@ func jiraBlob(statsStr string) string {
 			v415: "",
 		}
 
-		prevDone := false
 		for _, v := range versions {
 			if nsProg.perVersion[v] == nil {
-				if prevDone {
-					prLine[v] = "(/) "
-				}
 				continue
 			}
 
@@ -618,9 +628,8 @@ func jiraBlob(statsStr string) string {
 			}
 
 			status := ""
-			if prevDone || nsProg.perVersion[v].done {
+			if nsProg.perVersion[v].done {
 				status = "(/) "
-				prevDone = true
 			}
 
 			prs := make([]string, 0)
@@ -1174,7 +1183,7 @@ var progressPerNS = map[string]*nsProgress{
 				},
 			},
 			v415: {
-				done: false,
+				done: true,
 				prs: []string{
 					"https://github.com/openshift/cluster-autoscaler-operator/pull/332",
 					"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/326",
