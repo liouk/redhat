@@ -683,8 +683,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-insights": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
 			},
 			v415: {
@@ -732,8 +734,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-monitoring": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
 			},
 			v415: {
@@ -772,7 +776,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
 		},
@@ -783,8 +787,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-marketplace": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/561"},
 			},
 			v415: {
@@ -801,11 +807,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -878,8 +884,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-storage-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs: []string{
 					"https://github.com/openshift/cluster-storage-operator/pull/459",
 					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/196",
@@ -897,12 +905,13 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-machine-config-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
 			v417: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4219"},
 			},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4384"},
 			},
 			v415: {
@@ -925,11 +934,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -969,8 +978,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-image-registry": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1008"},
 			},
 			v415: {
@@ -983,7 +994,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
 		},
@@ -992,7 +1003,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
 		},
@@ -1047,11 +1058,11 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2282"},
 			},
 			v417: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2490"},
 			},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
 		},
@@ -1117,8 +1128,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-csi-drivers": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs: []string{
 					"https://github.com/openshift/csi-operator/pull/170",
 					"https://github.com/openshift/cluster-storage-operator/pull/459",
@@ -1165,14 +1178,15 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-machine-api": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
 			v417: {
-				done: true,
+				done: false,
 				prs: []string{
 					"https://github.com/openshift/cluster-baremetal-operator/pull/407",
 				},
 			},
 			v416: {
-				done: true,
+				done: false,
 				prs: []string{
 					"https://github.com/openshift/cluster-autoscaler-operator/pull/315",
 					"https://github.com/openshift/cluster-control-plane-machine-set-operator/pull/282",
@@ -1220,8 +1234,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-version": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
 			v416: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1038"},
 			},
 			v415: {
@@ -1265,7 +1281,7 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v417: {
-				done: true,
+				done: false,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4542"},
 			},
 			v416: {
@@ -1439,7 +1455,9 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-infra": {
 		nonRunlevel: true,
-		noFixNeeded: true,
+		perVersion: map[string]*versionProgress{
+			v415: {done: false},
+		},
 	},
 	"openshift": {
 		nonRunlevel: true,
