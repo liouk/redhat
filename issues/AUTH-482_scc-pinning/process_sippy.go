@@ -279,6 +279,10 @@ func main() {
 				fmt.Printf("* %s %s: namespace completed but is flaking\n", v, nsName)
 			}
 
+			if !ns.noFixNeeded && (!ns.perVersion[v].done && ns.perVersion[v].sippyTest.CurrentFlakes == 0) {
+				fmt.Printf("* %s %s: namespace marked as incomplete but has no flakes\n", v, nsName)
+			}
+
 			if ns.noFixNeeded && ns.perVersion[v].sippyTest.CurrentFlakes > 0 {
 				fmt.Printf("* %s %s: no fix needed but is flaking\n", v, nsName)
 			}
@@ -799,6 +803,15 @@ var progressPerNS = map[string]*nsProgress{
 			},
 		},
 	},
+	"openshift-network-console": {
+		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
+			v416: {done: false},
+			v415: {done: false},
+		},
+	},
 	"openshift-network-node-identity": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
@@ -1035,6 +1048,15 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/243"},
 			},
+		},
+	},
+	"openshift-storage": {
+		nonRunlevel: true,
+		perVersion: map[string]*versionProgress{
+			v418: {done: false},
+			v417: {done: false},
+			v416: {done: false},
+			v415: {done: false},
 		},
 	},
 	"openshift-oauth-apiserver": {
