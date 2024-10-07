@@ -62,8 +62,8 @@ do_registry () {
 
 main () {
 	do_registry $ci_registry_url $ci_registry_token_url
-	do_registry $ci_registry_build01_url $ci_registry_build01_token_url
-	do_registry $ci_registry_build05_url $ci_registry_build05_token_url
+	# do_registry $ci_registry_build01_url $ci_registry_build01_token_url
+	# do_registry $ci_registry_build05_url $ci_registry_build05_token_url
 
   echo -e "\n### Save pull secret to 1password"
   save_pull_secret

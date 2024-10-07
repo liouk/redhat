@@ -96,10 +96,6 @@ ci_login () {
   echo
   echo "Checking docker login to registry.ci.openshift.org (abort if prompted)"
   docker login registry.ci.openshift.org
-
-  echo "Checking docker login to registry.build05.ci.openshift.org (abort if prompted)"
-  docker login registry.build05.ci.openshift.org
-  echo
 }
 
 # verify aws login and show confirmation prompt
