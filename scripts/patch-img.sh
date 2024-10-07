@@ -12,7 +12,7 @@ patch_cluster-policy-controller () {
   local env_var="CLUSTER_POLICY_CONTROLLER_IMAGE"
   local env_var_idx=2
 
-  update_operand_image "$container" "$container_idx" "$env_var" "$env_var_idx"
+  update_container_env_image "$container" "$container_idx" "$env_var" "$env_var_idx"
 }
 
 patch_cluster-authentication-operator () {
@@ -51,13 +51,41 @@ patch_oauth-server () {
     }"
 }
 
+patch_kube-apiserver () {
+  local container="kube-apiserver-operator"
+  local container_idx=0
+  local env_var="IMAGE"
+  local env_var_idx=0
+
+  update_container_env_image "$container" "$container_idx" "$env_var" "$env_var_idx"
+}
+
 patch_kube-apiserver-operator () {
   local container="kube-apiserver-operator"
   local container_idx=0
-  local env_var="OPERATOR_IMAGE"
-  local env_var_idx=0
+  local env_var_idx=1
 
-  update_operand_image "$container" "$container_idx" "$env_var" "$env_var_idx"
+  local deployment=$(kubectl get deployment -n {openshift-,}$container -o json)
+
+  # replace OPERATOR_IMAGE
+  deployment=$(echo "$deployment" \
+    | jq ".spec.template.spec.containers[$container_idx].env[$env_var_idx].value = \"$IMG\"")
+
+  # replace container.image
+  deployment=$(echo "$deployment" \
+    | jq ".spec.template.spec.containers[$container_idx].image = \"$IMG\"")
+
+  echo $deployment | kubectl replace -f -
+
+  echo "New image:"
+  kubectl get deployment -n {openshift-,}$container -o json \
+    | jq "
+    {
+      containers: {
+        name: .spec.template.spec.containers[$container_idx].name,
+        env: .spec.template.spec.containers[$container_idx].env[$env_var_idx],
+        image: .spec.template.spec.containers[$container_idx].image}
+    }"
 }
 
 update_deployment_image () {
@@ -70,7 +98,7 @@ update_deployment_image () {
   kubectl -n $ns get deployment $deployment -o custom-columns="NAME:.metadata.name,IMAGE:.spec.template.spec.containers[$idx].image"
 }
 
-update_operand_image () {
+update_container_env_image () {
   local container="$1"
   local container_idx="$2"
   local env_var="$3"
