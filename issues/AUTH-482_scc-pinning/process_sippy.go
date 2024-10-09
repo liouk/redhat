@@ -791,7 +791,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-marketplace": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/578"},
+			},
 			v417: {done: false},
 			v416: {
 				done: false,
@@ -897,7 +900,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-storage-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-storage-operator/pull/516"},
+			},
 			v417: {done: false},
 			v416: {
 				done: false,
