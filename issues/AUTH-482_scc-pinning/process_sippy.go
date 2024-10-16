@@ -792,7 +792,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/578"},
 			},
 			v417: {done: false},
@@ -901,7 +901,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-storage-operator/pull/516"},
 			},
 			v417: {done: false},
@@ -924,7 +924,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-machine-config-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4636"},
+			},
 			v417: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4219"},
@@ -1156,7 +1159,16 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-csi-drivers": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/cluster-storage-operator/pull/524",
+					"https://github.com/openshift/gcp-pd-csi-driver-operator/pull/131",
+					"https://github.com/openshift/kubevirt-csi-driver-operator/pull/6",
+					"https://github.com/openshift/azure-disk-csi-driver-operator/pull/127",
+					"https://github.com/openshift/azure-file-csi-driver-operator/pull/108",
+				},
+			},
 			v417: {done: false},
 			v416: {
 				done: false,
