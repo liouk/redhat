@@ -738,8 +738,13 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-monitoring": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
-			v417: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2498"},
+			},
+			v417: {
+				done: false,
+			},
 			v416: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2335"},
