@@ -814,7 +814,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-network-console": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: true,
+				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2545"},
+			},
 			v417: {done: false},
 			v416: {done: false},
 			v415: {done: false},
