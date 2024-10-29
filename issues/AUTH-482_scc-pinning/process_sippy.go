@@ -1175,6 +1175,8 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/kubevirt-csi-driver-operator/pull/6",
 					"https://github.com/openshift/azure-disk-csi-driver-operator/pull/127",
 					"https://github.com/openshift/azure-file-csi-driver-operator/pull/108",
+					"https://github.com/openshift/csi-driver-shared-resource-operator/pull/118",
+					"https://github.com/openshift/csi-operator/pull/306",
 				},
 			},
 			v417: {done: false},
