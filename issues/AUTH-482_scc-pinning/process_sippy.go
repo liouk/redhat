@@ -687,7 +687,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-insights": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/1026"},
+			},
 			v417: {done: false},
 			v416: {
 				done: false,
@@ -794,15 +797,16 @@ var progressPerNS = map[string]*nsProgress{
 		runlevel: true,
 	},
 	"openshift-marketplace": {
+		// we won't fix further workloads in this one: see https://github.com/openshift/origin/blob/master/test/extended/util/managed_services.go#L8-L28
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
 				done: true,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/578"},
 			},
-			v417: {done: false},
+			v417: {done: true},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/561"},
 			},
 			v415: {
@@ -933,7 +937,7 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4636"},
 			},
 			v417: {
@@ -1068,13 +1072,7 @@ var progressPerNS = map[string]*nsProgress{
 		},
 	},
 	"openshift-storage": {
-		nonRunlevel: true,
-		perVersion: map[string]*versionProgress{
-			v418: {done: false},
-			v417: {done: false},
-			v416: {done: false},
-			v415: {done: false},
-		},
+		runlevel: true,
 	},
 	"openshift-oauth-apiserver": {
 		nonRunlevel: true,
@@ -1177,6 +1175,8 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/azure-file-csi-driver-operator/pull/108",
 					"https://github.com/openshift/csi-driver-shared-resource-operator/pull/118",
 					"https://github.com/openshift/csi-operator/pull/306",
+					"https://github.com/openshift/vmware-vsphere-csi-driver-operator/pull/265",
+					"https://github.com/openshift/ibm-powervs-block-csi-driver-operator/pull/75",
 				},
 			},
 			v417: {done: false},
@@ -1228,7 +1228,10 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-machine-api": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {done: false},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-api-operator/pull/1308"},
+			},
 			v417: {
 				done: false,
 				prs: []string{
