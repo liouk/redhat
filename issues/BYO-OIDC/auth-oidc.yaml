@@ -1,0 +1,32 @@
+apiVersion: config.openshift.io/v1
+kind: Authentication
+metadata:
+  name: cluster
+spec:
+  oauthMetadata:
+    name: ""
+  serviceAccountIssuer: ""
+  type: "OIDC"
+  webhookTokenAuthenticator:
+  oidcProviders:
+  - name: "keycloak-test-e2e-test-authentication-operator-sch9v"
+    issuer:
+      issuerURL: "https://test-route-e2e-test-authentication-operator-sch9v.apps.irinis-v4.18.0-0.ci-2024-11-26-081001-20241127.group-b.devcluster.openshift.com/realms/master"
+      audiences:
+      - openshift-aud
+      - admin-cli
+      issuerCertificateAuthority:
+        name: keycloak-test-e2e-test-authentication-operator-sch9v-ca
+    oidcClients:
+    - componentName: "console"
+      componentNamespace: "openshift-console"
+      clientID: "console"
+    claimMappings:
+      username:
+        claim: "email"
+        prefixPolicy: "Prefix"
+        prefix:
+          prefixString: "oidc-test:"
+      groups:
+        claim: "groups"
+        prefix: ""
