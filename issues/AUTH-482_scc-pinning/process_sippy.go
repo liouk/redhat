@@ -61,10 +61,14 @@ type stats struct {
 }
 
 const (
+	v414 = "4.14"
 	v415 = "4.15"
 	v416 = "4.16"
 	v417 = "4.17"
 	v418 = "4.18"
+	v419 = "4.19"
+
+	currentVersion = v419
 
 	sippyFilter = `{"items":[{"columnField":"name","operatorValue":"starts with","value":"[sig-auth] all workloads in ns/"},{"columnField":"name","operatorValue":"ends with","value":"must set the 'openshift.io/required-scc' annotation"}],"linkOperator":"and"}`
 )
@@ -72,36 +76,39 @@ const (
 var (
 	out = os.Stdout
 
-	versions = []string{v415, v416, v417, v418}
+	versions = []string{v414, v415, v416, v417, v418, v419}
 
 	untestedPerVersion = map[string][]string{
+		v414: {},
 		v415: {},
 		v416: {},
 		v417: {},
 		v418: {},
+		v419: {},
 	}
 
 	versionStats = map[string]*stats{
+		v414: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v415: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v416: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v417: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 		v418: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
+		v419: {allPRs: make(map[string]struct{}), openPRs: make(map[string]struct{})},
 	}
 
 	ignoreNS = map[string]struct{}{
 		"openshift-rukpak": {}, // see https://github.com/openshift/operator-framework-rukpak/pull/92#issuecomment-2286534684
 	}
 
-	branchedAt417 time.Time
-)
-
-func init() {
-	zh, err := time.LoadLocation("Europe/Zurich")
-	if err != nil {
-		panic(err)
+	releaseBranchesToCheck = map[string]string{
+		v417: "release-4.17",
+		v418: "release-4.18",
 	}
-	branchedAt417 = time.Date(2024, 8, 10, 0, 0, 0, 0, zh)
-}
+
+	repoWithoutReleaseBranches = map[string]bool{
+		"openshift/release": true,
+	}
+)
 
 func main() {
 
@@ -138,15 +145,19 @@ func main() {
 					vstats.allPRs[pr] = struct{}{}
 				}
 
-				// check which PRs merged after 4.17
-				// if v == v417 {
-				// 	for _, pr := range ns.perVersion[v].prs {
-				// 		mergedAt := prMergedAt(pr)
-				// 		if !mergedAt.IsZero() && mergedAt.After(branchedAt417) {
-				// 			fmt.Printf("* merged after v4.17: %s (mergedAt = %s)\n", pr, mergedAt)
-				// 		}
-				// 	}
-				// }
+				if branch := releaseBranchesToCheck[v]; len(branch) > 0 {
+					// check which PRs merged after a version
+
+					for _, pr := range ns.perVersion[v].prs {
+						if prStatus(pr) == "OPEN" {
+							continue
+						}
+
+						if foundInBranch, branchExistsInRepo := prInBranch(pr, branch); branchExistsInRepo && !foundInBranch {
+							fmt.Println("*", v, "PR", pr, "not part of", branch, "(merged in newer release)")
+						}
+					}
+				}
 			}
 
 			if ns.noFixNeeded {
@@ -173,18 +184,29 @@ func main() {
 			allMerged := true
 			for _, pr := range ns.perVersion[v].prs {
 				if prStatus(pr) == "OPEN" {
-					// warn about 4.17 PRs that will now merge on 4.18
-					// if v == v417 {
-					// 	fmt.Printf("* v4.17 PR should be promoted to 4.18: %s\n", pr)
-					// }
+					baseBranch := prBaseBranch(pr)
+					if v == currentVersion && baseBranch != "master" && baseBranch != "main" {
+						fmt.Printf("* %s PR on wrong base branch (expected master/main): %s\n", v, pr)
+					}
+
+					if v != currentVersion {
+						if baseBranch == "master" || baseBranch == "main" {
+							fmt.Printf("* %s PR should be promoted to %s: %s\n", v, currentVersion, pr)
+						}
+
+						expected := fmt.Sprintf("release-%s", v)
+						if baseBranch != expected {
+							fmt.Printf("* %s PR on wrong version (expected %s): %s\n", v, expected, pr)
+						}
+					}
+
 					vstats.openPRs[pr] = struct{}{}
 					allMerged = false
-					break
 				}
 			}
 
 			if len(ns.perVersion[v].prs) > 0 && allMerged {
-				fmt.Printf("* all v%s PRs of %s have been closed\n", v, nsName)
+				fmt.Printf("* all v%s PRs of %s have been merged\n", v, nsName)
 			}
 		}
 	}
@@ -197,10 +219,12 @@ func main() {
 		flakes    int
 		failures  int
 	}{
+		v414: {},
 		v415: {},
 		v416: {},
 		v417: {},
 		v418: {},
+		v419: {},
 	}
 
 	for _, v := range versions {
@@ -289,47 +313,55 @@ func main() {
 		}
 	}
 
-	header := "|  #  | Component | Namespace | 4.18 Flakes | 4.17 Flakes | 4.16 Flakes | 4.15 Flakes | 4.18 PRs | 4.17 PRs | 4.16 PRs | 4.15 PRs |"
-	subhdr := "| --- | --------- | --------- | ----------- | ----------- | ----------- | ----------- | -------- | -------- | -------- | -------- |"
+	header := "|  #  | Component | Namespace | 4.19 Flakes | 4.18 Flakes | 4.17 Flakes | 4.16 Flakes | 4.15 Flakes | 4.14 Flakes | 4.19 PRs | 4.18 PRs | 4.17 PRs | 4.16 PRs | 4.15 PRs | 4.14 PRs |"
+	subhdr := "| --- | --------- | --------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | -------- | -------- | -------- | -------- | -------- | -------- |"
 	statsStr := getStats()
 
 	fmt.Fprintf(out, "*Last updated: %s*\n\n", time.Now().Format(time.DateTime))
 	fmt.Fprint(out, "[Authored PRs](https://github.com/pulls?q=is%3Apr+author%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [Assigned PRs](https://github.com/pulls?q=is%3Apr+assignee%3Aliouk+archived%3Afalse+AUTH-482+in%3Atitle+is%3Aopen), [All open PRs](https://github.com/search?q=org%3Aopenshift+is%3Apr+is%3Aopen+%2Fset+required-scc+for+openshift+workloads%2F+in%3Atitle&type=pullrequests)\n\n[Jira issue](https://issues.redhat.com/browse/AUTH-482) [Jira Backport Dashboard](https://issues.redhat.com/secure/Dashboard.jspa?selectPageId=12363204)\n\n")
 
-	fmt.Fprintf(out, "| Tests | 4.18 | 4.17 | 4.16 | 4.15 |\n")
-	fmt.Fprintf(out, "| ----- | ---- | ---- | ---- | ---- |\n")
-	fmt.Fprintf(out, "| total runs | %d | %d | %d | %d |\n",
+	fmt.Fprintf(out, "| Tests | 4.19 | 4.18 | 4.17 | 4.16 | 4.15 | 4.14 |\n")
+	fmt.Fprintf(out, "| ----- | ---- | ---- | ---- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| total runs | %d | %d | %d | %d | %d | %d |\n",
+		versionTestStats[v419].total,
 		versionTestStats[v418].total,
 		versionTestStats[v417].total,
 		versionTestStats[v416].total,
 		versionTestStats[v415].total,
+		versionTestStats[v414].total,
 	)
-	fmt.Fprintf(out, "| successes | %d | %d | %d | %d |\n",
+	fmt.Fprintf(out, "| successes | %d | %d | %d | %d | %d | %d |\n",
+		versionTestStats[v419].successes,
 		versionTestStats[v418].successes,
 		versionTestStats[v417].successes,
 		versionTestStats[v416].successes,
 		versionTestStats[v415].successes,
+		versionTestStats[v414].successes,
 	)
-	fmt.Fprintf(out, "| flakes | %d | %d | %d | %d |\n",
+	fmt.Fprintf(out, "| flakes | %d | %d | %d | %d | %d | %d |\n",
+		versionTestStats[v419].flakes,
 		versionTestStats[v418].flakes,
 		versionTestStats[v417].flakes,
 		versionTestStats[v416].flakes,
 		versionTestStats[v415].flakes,
+		versionTestStats[v414].flakes,
 	)
-	fmt.Fprintf(out, "| failures | %d | %d | %d | %d |\n\n",
+	fmt.Fprintf(out, "| failures | %d | %d | %d | %d | %d | %d |\n\n",
+		versionTestStats[v419].failures,
 		versionTestStats[v418].failures,
 		versionTestStats[v417].failures,
 		versionTestStats[v416].failures,
 		versionTestStats[v415].failures,
+		versionTestStats[v414].failures,
 	)
 
-	fmt.Fprintf(out, "| Num PRs | 4.18 | 4.17 | 4.16 | 4.15 |\n")
-	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- | ---- |\n")
-	fmt.Fprintf(out, "| open PRs | %d | %d | %d | %d |\n", len(versionStats[v418].openPRs), len(versionStats[v417].openPRs), len(versionStats[v416].openPRs), len(versionStats[v415].openPRs))
-	fmt.Fprintf(out, "| total PRs | %d | %d | %d | %d |\n\n", len(versionStats[v418].allPRs), len(versionStats[v417].allPRs), len(versionStats[v416].allPRs), len(versionStats[v415].allPRs))
+	fmt.Fprintf(out, "| Num PRs | 4.19 | 4.18 | 4.17 | 4.16 | 4.15 | 4.14 |\n")
+	fmt.Fprintf(out, "| ------- | ---- | ---- | ---- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| open PRs | %d | %d | %d | %d | %d | %d |\n", len(versionStats[v419].openPRs), len(versionStats[v418].openPRs), len(versionStats[v417].openPRs), len(versionStats[v416].openPRs), len(versionStats[v415].openPRs), len(versionStats[v414].openPRs))
+	fmt.Fprintf(out, "| total PRs | %d | %d | %d | %d | %d | %d |\n\n", len(versionStats[v419].allPRs), len(versionStats[v418].allPRs), len(versionStats[v417].allPRs), len(versionStats[v416].allPRs), len(versionStats[v415].allPRs), len(versionStats[v414].allPRs))
 
-	fmt.Fprintf(out, "| # namespaces | 4.18 | 4.17 | 4.16 | 4.15 |\n")
-	fmt.Fprintf(out, "| ------ | ---- | ---- | ---- | ---- |\n")
+	fmt.Fprintf(out, "| # namespaces | 4.19 | 4.18 | 4.17 | 4.16 | 4.15 | 4.14 |\n")
+	fmt.Fprintf(out, "| ------ | ---- | ---- | ---- | ---- | ---- | ---- |\n")
 	fmt.Fprintf(out, "%s\n", statsStr)
 	fmt.Fprintln(out, "## Non-runlevel")
 	fmt.Fprintln(out, header)
@@ -447,47 +479,43 @@ func sortAndPrint(nsProg []*nsProgress) {
 			}
 		}
 
-		fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %s | %s | %s | %s |\n",
+		fmt.Fprintf(out, "| %d | %s | %s | %d | %d | %d | %d | %d | %d | %s | %s | %s | %s | %s | %s |\n",
 			i+1,
 			ns.jiraComponent,
 			ns.nsName,
+			flakes[v419],
 			flakes[v418],
 			flakes[v417],
 			flakes[v416],
 			flakes[v415],
+			flakes[v414],
+			prLine[v419],
 			prLine[v418],
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
+			prLine[v414],
 		)
 	}
 }
 
-func prMergedAt(url string) time.Time {
+func prBaseBranch(url string) string {
 	matches := regexp.MustCompile(`https\:\/\/github\.com\/(.*)\/pull\/(\d+)`).FindStringSubmatch(url)
 	if len(matches) != 3 {
 		panic("bad PR url format: " + url)
 	}
+	prNum := matches[2]
+	repo := matches[1]
 
 	var out, stderr strings.Builder
-	cmd := exec.Command("gh", "pr", "view", matches[2], "--repo", matches[1], "--json", "mergedAt", "-q", ".mergedAt")
+	cmd := exec.Command("gh", "pr", "view", prNum, "--repo", repo, "--json", "baseRefName", "--jq", ".baseRefName")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		panic(fmt.Errorf("cmd '%s' failed with error: %s", cmd.String(), stderr.String()))
 	}
 
-	mergedAtStr := strings.TrimSpace(out.String())
-	if len(mergedAtStr) == 0 {
-		return time.Time{}
-	}
-
-	mergedAt, err := time.Parse("2006-01-02T15:04:05Z", mergedAtStr)
-	if err != nil {
-		panic(fmt.Errorf("couldn't parse time string '%s': %v", mergedAtStr, err))
-	}
-
-	return mergedAt
+	return strings.TrimSpace(out.String())
 }
 
 func prStatus(url string) string {
@@ -497,7 +525,7 @@ func prStatus(url string) string {
 	}
 
 	var out, stderr strings.Builder
-	cmd := exec.Command("gh", "pr", "view", matches[2], "--repo", matches[1], "--json", "state", "-q", ".state")
+	cmd := exec.Command("gh", "pr", "view", matches[2], "--repo", matches[1], "--json", "state", "--jq", ".state")
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -535,45 +563,57 @@ func getRunlevel(ns string) (runlevel bool, nonRunlevel bool) {
 func getStats() string {
 	var statsBuf bytes.Buffer
 
-	statsBuf.WriteString(fmt.Sprintf("| monitored | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| monitored | %d | %d | %d | %d | %d | %d |\n",
+		versionStats[v419].numNS,
 		versionStats[v418].numNS,
 		versionStats[v417].numNS,
 		versionStats[v416].numNS,
 		versionStats[v415].numNS,
+		versionStats[v414].numNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| fix needed | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| fix needed | %d | %d | %d | %d | %d | %d |\n",
+		versionStats[v414].numNS-versionStats[v419].numNoFixNeededNS,
 		versionStats[v418].numNS-versionStats[v418].numNoFixNeededNS,
 		versionStats[v417].numNS-versionStats[v417].numNoFixNeededNS,
 		versionStats[v416].numNS-versionStats[v416].numNoFixNeededNS,
 		versionStats[v415].numNS-versionStats[v415].numNoFixNeededNS,
+		versionStats[v414].numNS-versionStats[v414].numNoFixNeededNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| fixed | %d | %d | %d | %d |\n",
-		versionStats[v418].numDoneNS, versionStats[v417].numDoneNS, versionStats[v416].numDoneNS, versionStats[v415].numDoneNS,
+	statsBuf.WriteString(fmt.Sprintf("| fixed | %d | %d | %d | %d | %d | %d |\n",
+		versionStats[v419].numDoneNS, versionStats[v418].numDoneNS, versionStats[v417].numDoneNS, versionStats[v416].numDoneNS, versionStats[v415].numDoneNS, versionStats[v414].numDoneNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| remaining | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| remaining | %d | %d | %d | %d | %d | %d |\n",
+		versionStats[v419].numNS-(versionStats[v419].numDoneNS+versionStats[v419].numNoFixNeededNS),
 		versionStats[v418].numNS-(versionStats[v418].numDoneNS+versionStats[v418].numNoFixNeededNS),
 		versionStats[v417].numNS-(versionStats[v417].numDoneNS+versionStats[v417].numNoFixNeededNS),
-		versionStats[v417].numNS-(versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS),
-		versionStats[v417].numNS-(versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS),
+		versionStats[v416].numNS-(versionStats[v416].numDoneNS+versionStats[v416].numNoFixNeededNS),
+		versionStats[v415].numNS-(versionStats[v415].numDoneNS+versionStats[v415].numNoFixNeededNS),
+		versionStats[v414].numNS-(versionStats[v414].numDoneNS+versionStats[v414].numNoFixNeededNS),
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining non-runlevel | %d | %d | %d | %d | %d | %d |\n",
 		// untested namespaces end up being counted as remaining-non-runlevel
+		versionStats[v419].numRemainingNonRunlevelNS,
 		versionStats[v418].numRemainingNonRunlevelNS,
 		versionStats[v417].numRemainingNonRunlevelNS,
 		versionStats[v416].numRemainingNonRunlevelNS,
 		versionStats[v415].numRemainingNonRunlevelNS,
+		versionStats[v414].numRemainingNonRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel (low-prio) | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ remaining runlevel (low-prio) | %d | %d | %d | %d | %d | %d |\n",
+		versionStats[v419].numRemainingRunlevelNS,
 		versionStats[v418].numRemainingRunlevelNS,
 		versionStats[v417].numRemainingRunlevelNS,
 		versionStats[v416].numRemainingRunlevelNS,
 		versionStats[v415].numRemainingRunlevelNS,
+		versionStats[v414].numRemainingRunlevelNS,
 	))
-	statsBuf.WriteString(fmt.Sprintf("| ~ untested | %d | %d | %d | %d |\n",
+	statsBuf.WriteString(fmt.Sprintf("| ~ untested | %d | %d | %d | %d | %d | %d |\n",
+		len(untestedPerVersion[v419]),
 		len(untestedPerVersion[v418]),
 		len(untestedPerVersion[v417]),
 		len(untestedPerVersion[v416]),
 		len(untestedPerVersion[v415]),
+		len(untestedPerVersion[v414]),
 	))
 
 	return statsBuf.String()
@@ -589,10 +629,10 @@ func jiraBlob(statsStr string) string {
 
 	var jiraBlob bytes.Buffer
 	jiraBlob.WriteString("h3. Progress summary\n")
-	jiraBlob.WriteString("|| \\# namespaces || 4.18 || 4.17 || 4.16 || 4.15 ||\n")
+	jiraBlob.WriteString("|| \\# namespaces || 4.19 || 4.18 || 4.17 || 4.16 || 4.15 || 4.14 ||\n")
 	jiraBlob.WriteString(fmt.Sprintf("%s\n", statsStr))
 	jiraBlob.WriteString("h3. Progress breakdown\n")
-	jiraBlob.WriteString("||#||namespace||4.18||4.17||4.16||4.15||\n")
+	jiraBlob.WriteString("||#||namespace||4.19||4.18||4.17||4.16||4.15||4.14||\n")
 
 	slices.SortStableFunc(nses, func(ns1, ns2 string) int {
 		if progressPerNS[ns1].runlevel {
@@ -615,10 +655,12 @@ func jiraBlob(statsStr string) string {
 		}
 
 		prLine := map[string]string{
+			v419: "",
 			v418: "",
 			v417: "",
 			v416: "",
 			v415: "",
+			v414: "",
 		}
 
 		for _, v := range versions {
@@ -648,13 +690,15 @@ func jiraBlob(statsStr string) string {
 			nsName = "(runlevel) " + ns
 		}
 
-		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s | %s |\n",
+		jiraBlob.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s | %s | %s | %s |\n",
 			i,
 			nsName,
+			prLine[v419],
 			prLine[v418],
 			prLine[v417],
 			prLine[v416],
 			prLine[v415],
+			prLine[v414],
 		))
 		i++
 	}
@@ -665,6 +709,65 @@ func jiraBlob(statsStr string) string {
 func prName(url string) string {
 	parts := strings.Split(url, "/")
 	return fmt.Sprintf("#%s", parts[len(parts)-1])
+}
+
+type ghCmdError struct {
+	Message string `json:"message"`
+	Status  string `json:"status"`
+	DocURL  string `json:"documentation_url"`
+}
+
+func prInBranch(pr, branch string) (mergedInBranch bool, branchExistsInRepo bool) {
+	r := regexp.MustCompile(`https?://github\.com/([^/]+)/([^/]+)/pull/(\d+)`)
+	matches := r.FindStringSubmatch(pr)
+
+	if len(matches) != 4 {
+		panic(fmt.Errorf("couldn't parse PR URL: %s", pr))
+	}
+
+	owner := matches[1]
+	repo := matches[2]
+	prNum := matches[3]
+
+	if repoWithoutReleaseBranches[fmt.Sprintf("%s/%s", owner, repo)] {
+		return false, false
+	}
+
+	// get PR's merge commit SHA
+	var cmd *exec.Cmd
+	var stdout, stderr strings.Builder
+	cmd = exec.Command("gh", "pr", "view", prNum, "--repo", fmt.Sprintf("%s/%s", owner, repo), "--json", "mergeCommit", "--jq", ".mergeCommit.oid")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		panic(fmt.Errorf("cmd '%s' failed with error: %s", cmd.String(), stderr.String()))
+	}
+	mergeCommitSHA := strings.TrimSpace(stdout.String())
+
+	// check if merge commit SHA belongs to the specified branch
+	stdout.Reset()
+	stderr.Reset()
+	cmpString := fmt.Sprintf("repos/%s/%s/compare/%s...%s", owner, repo, branch, mergeCommitSHA)
+	cmd = exec.Command("gh", "api", cmpString, "--jq", ".status")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		var cmdErr ghCmdError
+		jsonErr := json.Unmarshal([]byte(stdout.String()), &cmdErr)
+		if jsonErr != nil {
+			panic(err)
+		}
+
+		if cmdErr.Status == "404" {
+			fmt.Printf("* %s/%s commit '%s' of PR %s not found on branch %s\n", owner, repo, mergeCommitSHA, pr, branch)
+			return false, true
+		}
+
+		panic(fmt.Errorf("cmd '%s' failed with error: %s", cmd.String(), stderr.String()))
+	}
+
+	cmpStatus := strings.TrimSpace(stdout.String())
+	return strings.EqualFold(cmpStatus, "identical") || strings.EqualFold(cmpStatus, "behind"), true
 }
 
 var progressPerNS = map[string]*nsProgress{
@@ -679,6 +782,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-etcd-operator": {
@@ -687,11 +791,18 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-insights": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/1033"},
+			},
 			v418: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/insights-operator/pull/1026"},
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/1041"},
 			},
-			v417: {done: false},
+			v417: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/insights-operator/pull/1049"},
+			},
 			v416: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
@@ -700,6 +811,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/967"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-controller-manager-operator": {
@@ -723,6 +835,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/924"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-controller-manager": {
@@ -736,11 +849,13 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-monitoring": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2498"},
@@ -756,6 +871,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2420"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-route-controller-manager": {
@@ -769,6 +885,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-controller-manager-operator/pull/361"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cluster-olm-operator": {
@@ -782,15 +899,21 @@ var progressPerNS = map[string]*nsProgress{
 				done:         true,
 				wontdoReason: "TechPreview", // respective feature was on TechPreview on 4.15
 			},
+			v414: {wontdoReason: "NoWorkload"},
 		},
 	},
 	"openshift-ingress": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
+			v417: {done: false},
+			v416: {done: false},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-apiserver": {
@@ -813,6 +936,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/operator-framework/operator-marketplace/pull/570"},
 			},
+			v414: {done: true},
 		},
 	},
 	"openshift-network-console": {
@@ -825,6 +949,7 @@ var progressPerNS = map[string]*nsProgress{
 			v417: {done: false},
 			v416: {done: false},
 			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-network-node-identity": {
@@ -842,6 +967,8 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-operator-lifecycle-manager": {
@@ -855,6 +982,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-olm/pull/828"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-user-workload-monitoring": {
@@ -868,6 +996,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2420"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-config-operator": {
@@ -881,6 +1010,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-config-operator/pull/420"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-storage-version-migrator": {
@@ -894,6 +1024,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cloud-credential-operator": {
@@ -907,6 +1038,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cloud-credential-operator/pull/736"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cluster-storage-operator": {
@@ -931,6 +1063,7 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/cluster-csi-snapshot-controller-operator/pull/211",
 				},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-machine-config-operator": {
@@ -952,6 +1085,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4393"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cloud-controller-manager": {
@@ -975,6 +1109,8 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-cluster-machine-approver": {
@@ -991,6 +1127,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-catalogd/pull/58"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cloud-controller-manager-operator": {
@@ -1007,6 +1144,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-node-tuning-operator/pull/1117"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-image-registry": {
@@ -1022,24 +1160,35 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-image-registry-operator/pull/1067"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-ingress-canary": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
+			v417: {done: false},
+			v416: {done: false},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-ingress-operator": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
 			},
+			v417: {done: false},
+			v416: {done: false},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-apiserver-operator": {
@@ -1056,6 +1205,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-service-ca-operator": {
@@ -1069,6 +1219,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/243"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-storage": {
@@ -1085,6 +1236,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cloud-network-config-controller": {
@@ -1102,6 +1254,8 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-network-operator/pull/2496"},
 			},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-cluster-samples-operator": {
@@ -1115,6 +1269,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-samples-operator/pull/548"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-storage-version-migrator-operator": {
@@ -1128,6 +1283,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-kube-storage-version-migrator-operator/pull/112"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-operator-controller": {
@@ -1141,6 +1297,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/operator-framework-operator-controller/pull/120"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-service-ca": {
@@ -1154,6 +1311,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/service-ca-operator/pull/243"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-etcd": {
@@ -1165,15 +1323,18 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-csi-drivers": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/kubevirt-csi-driver-operator/pull/6",
+					"https://github.com/openshift/csi-driver-shared-resource-operator/pull/118",
+				},
+			},
 			v418: {
 				done: false,
 				prs: []string{
 					"https://github.com/openshift/cluster-storage-operator/pull/524",
 					"https://github.com/openshift/gcp-pd-csi-driver-operator/pull/131",
-					"https://github.com/openshift/kubevirt-csi-driver-operator/pull/6",
-					"https://github.com/openshift/azure-disk-csi-driver-operator/pull/127",
-					"https://github.com/openshift/azure-file-csi-driver-operator/pull/108",
-					"https://github.com/openshift/csi-driver-shared-resource-operator/pull/118",
 					"https://github.com/openshift/csi-operator/pull/306",
 					"https://github.com/openshift/vmware-vsphere-csi-driver-operator/pull/265",
 					"https://github.com/openshift/ibm-powervs-block-csi-driver-operator/pull/75",
@@ -1193,6 +1354,7 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/cluster-storage-operator/pull/484",
 				},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-console-operator": {
@@ -1210,6 +1372,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/console-operator/pull/924"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-authentication-operator": {
@@ -1223,14 +1386,19 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-authentication-operator/pull/675"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-machine-api": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v418: {
+			v419: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/machine-api-operator/pull/1308"},
+			},
+			v418: {
+				done: false,
+				prs:  []string{"https://github.com/openshift/machine-api-operator/pull/1311"},
 			},
 			v417: {
 				done: false,
@@ -1260,6 +1428,7 @@ var progressPerNS = map[string]*nsProgress{
 					"https://github.com/openshift/cluster-baremetal-operator/pull/443",
 				},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-multus": {
@@ -1279,6 +1448,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-openshift-apiserver-operator/pull/581"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-scheduler": {
@@ -1287,6 +1457,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-cluster-version": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {done: false},
 			v417: {done: false},
 			v416: {
@@ -1297,6 +1468,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/cluster-version-operator/pull/1068"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-scheduler-operator": {
@@ -1324,6 +1496,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/release/pull/56579"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kni-infra": {
@@ -1345,6 +1518,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-vsphere-infra": {
@@ -1366,6 +1540,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-ovirt-infra": {
@@ -1380,8 +1555,8 @@ var progressPerNS = map[string]*nsProgress{
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
 			},
 			v417: {
-				done: true,
-				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+				done: false,
+				prs:  []string{},
 			},
 			v416: {
 				done: true,
@@ -1391,6 +1566,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-nutanix-infra": {
@@ -1402,7 +1578,7 @@ var progressPerNS = map[string]*nsProgress{
 			},
 			v417: {
 				done: true,
-				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4504"},
+				prs:  []string{},
 			},
 			v416: {
 				done: true,
@@ -1412,6 +1588,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/machine-config-operator/pull/4540"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cloud-platform-infra": {
@@ -1437,6 +1614,8 @@ var progressPerNS = map[string]*nsProgress{
 				done: false,
 				prs:  []string{"https://github.com/openshift/metallb-operator/pull/241"},
 			},
+			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift-manila-csi-driver": {
@@ -1455,6 +1634,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/csi-driver-manila-operator/pull/236"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-kube-proxy": {
@@ -1466,7 +1646,6 @@ var progressPerNS = map[string]*nsProgress{
 			v417: {
 				done: true,
 				prs: []string{
-					"https://github.com/k8snetworkplumbingwg/sriov-network-operator/pull/754",
 					"https://github.com/openshift/sriov-network-operator/pull/995",
 				},
 			},
@@ -1478,6 +1657,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/sriov-network-operator/pull/1003"},
 			},
+			v414: {done: false},
 		},
 	},
 	"openshift-cluster-api": {
@@ -1508,8 +1688,10 @@ var progressPerNS = map[string]*nsProgress{
 	},
 	"openshift-infra": {
 		nonRunlevel: true,
+		noFixNeeded: true,
 		perVersion: map[string]*versionProgress{
 			v415: {done: false},
+			v414: {done: false},
 		},
 	},
 	"openshift": {
@@ -1550,6 +1732,7 @@ var progressPerNS = map[string]*nsProgress{
 				done: true,
 				prs:  []string{"https://github.com/openshift/oc/pull/1818"},
 			},
+			v414: {done: false},
 		},
 	},
 }
