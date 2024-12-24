@@ -792,19 +792,19 @@ var progressPerNS = map[string]*nsProgress{
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
 			v419: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/1033"},
 			},
 			v418: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/1041"},
 			},
 			v417: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/1049"},
 			},
 			v416: {
-				done: false,
+				done: true,
 				prs:  []string{"https://github.com/openshift/insights-operator/pull/915"},
 			},
 			v415: {
@@ -855,7 +855,13 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-monitoring": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
-			v419: {done: false},
+			v419: {
+				done: false,
+				prs: []string{
+					"https://github.com/openshift/managed-cluster-config/pull/2298",
+					"https://github.com/openshift/configure-alertmanager-operator/pull/366",
+				},
+			},
 			v418: {
 				done: false,
 				prs:  []string{"https://github.com/openshift/cluster-monitoring-operator/pull/2498"},
@@ -908,7 +914,7 @@ var progressPerNS = map[string]*nsProgress{
 			v419: {done: false},
 			v418: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1031"},
+				prs:  []string{"https://github.com/openshift/cluster-ingress-operator/pull/1032"},
 			},
 			v417: {done: false},
 			v416: {done: false},
@@ -1150,6 +1156,7 @@ var progressPerNS = map[string]*nsProgress{
 	"openshift-image-registry": {
 		nonRunlevel: true,
 		perVersion: map[string]*versionProgress{
+			v419: {done: false},
 			v418: {done: false},
 			v417: {done: false},
 			v416: {
@@ -1326,8 +1333,9 @@ var progressPerNS = map[string]*nsProgress{
 			v419: {
 				done: false,
 				prs: []string{
-					"https://github.com/openshift/kubevirt-csi-driver-operator/pull/6",
 					"https://github.com/openshift/csi-driver-shared-resource-operator/pull/118",
+					"https://github.com/openshift/hypershift/pull/5310",
+					"https://github.com/openshift/ibm-vpc-block-csi-driver-operator/pull/135",
 				},
 			},
 			v418: {
@@ -1394,7 +1402,10 @@ var progressPerNS = map[string]*nsProgress{
 		perVersion: map[string]*versionProgress{
 			v419: {
 				done: false,
-				prs:  []string{"https://github.com/openshift/machine-api-operator/pull/1308"},
+				prs: []string{
+					"https://github.com/openshift/machine-api-operator/pull/1308",
+					"https://github.com/openshift/machine-api-operator/pull/1317",
+				},
 			},
 			v418: {
 				done: false,
