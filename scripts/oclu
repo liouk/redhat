@@ -350,8 +350,11 @@ cmd_create () {
 
   cmd_installer $arg_version $arg_pub
 
-  cluster_name="${RH_USERNAME}-v${ocp_version}-$(date '+%Y%m%d')"
-  [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && cluster_name="${cluster_name}-$(date '+%H%M')"
+  ocp_version_short=$(echo "$ocp_version" | awk -F. '{print $1 $2}')
+  date_short=$(date +'%y%m%d')
+  rand=$(head -c 20 /dev/urandom | sha1sum | cut -c1-5)
+  cluster_name="liouk${ocp_version_short}-${date_short}-${rand}"
+  [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && { echo "error: cluster dir for '$cluster_name' already exists"; exit 1; }
 
   if [ -n "$arg_name" ]; then
     [[ ${arg_name:0:1} == "-" ]] && cluster_name="${cluster_name}$arg_name" || cluster_name="$arg_name"
@@ -553,7 +556,6 @@ main () {
   esac
 }
 
-[ -z "$RH_USERNAME" ] && { echo "RH_USERNAME env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_CONFIG_DIR" ] && { echo "OCP_CLUSTER_CONFIG_DIR env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_CONFIG_DIRNAME" ] && { echo "OCP_CLUSTER_CONFIG_DIRNAME env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_CONFIG_TEMPLATES_DIR" ] && { echo "OCP_CLUSTER_CONFIG_TEMPLATES_DIR env variable required but is not set"; exit 1; }
