@@ -215,7 +215,7 @@ load_cluster_configs () {
   done
 
   # openshift-install configs
-  configs=( $(find "$OCP_CLUSTER_CONFIG_DIR" -maxdepth 1 -regex "$OCP_CLUSTER_CONFIG_REGEX" 2>/dev/null) )
+  configs=( $(find "$OCP_CLUSTER_CONFIG_DIR" -mindepth 1 -maxdepth 1 \( -name "archive" -o -name "templates" \) -prune -o -print 2>/dev/null) )
   for c in "${configs[@]}"; do
     [[ -z "${c// }" ]] || all_configs+=($c)
   done
@@ -561,7 +561,6 @@ main () {
 [ -z "$OCP_CLUSTER_CONFIG_TEMPLATES_DIR" ] && { echo "OCP_CLUSTER_CONFIG_TEMPLATES_DIR env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR" ] && { echo "OCP_CLUSTER_CONFIG_ARCHIVE_DIR env variable required but is not set"; exit 1; }
 [ -z "$OCP_INSTALLER_DIR" ] && { echo "OCP_INSTALLER_DIR env variable required but is not set"; exit 1; }
-[ -z "$OCP_CLUSTER_CONFIG_REGEX" ] && { echo "OCP_CLUSTER_CONFIG_REGEX env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_KUBECONFIG" ] && { echo "OCP_CLUSTER_KUBECONFIG env variable required but is not set"; exit 1; }
 [ -z "$OP_ITEM_OCP_PULL_SECRET" ] && { echo "OP_ITEM_OCP_PULL_SECRET env variable required but is not set"; exit 1; }
 [ -z "$OP_ITEM_OCP_CONSOLE" ] && { echo "OP_ITEM_OCP_CONSOLE env variable required but is not set"; exit 1; }
