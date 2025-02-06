@@ -55,7 +55,7 @@ COMMANDS
         Select and destroy an existing cluster using openshift-install.
 
         -v, --ocp-version <string>
-          Specify the version to destroy (required).
+          Specify the version to destroy.
 
         -d, --dir <path>
           Specify the directory of the cluster to destroy.
@@ -350,11 +350,15 @@ cmd_create () {
 
   cmd_installer $arg_version $arg_pub
 
-  ocp_version_short=$(echo "$ocp_version" | awk -F. '{print $1 $2}')
+  ocp_version_short=$(echo "$ocp_version" | awk -F. '{print $1 "." $2}')
   date_short=$(date +'%y%m%d')
-  rand=$(head -c 20 /dev/urandom | sha1sum | cut -c1-5)
-  cluster_name="liouk${ocp_version_short}-${date_short}-${rand}"
-  [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ] && { echo "error: cluster dir for '$cluster_name' already exists"; exit 1; }
+  base_cluster_name="liouk-v${ocp_version_short}-${date_short}"
+  counter=1
+  cluster_name="$base_cluster_name"
+  while [ -d "$OCP_CLUSTER_CONFIG_DIR/$cluster_name" ]; do
+    cluster_name="${base_cluster_name}-$counter"
+    counter=$((counter + 1))
+  done
 
   if [ -n "$arg_name" ]; then
     [[ ${arg_name:0:1} == "-" ]] && cluster_name="${cluster_name}$arg_name" || cluster_name="$arg_name"
@@ -379,7 +383,7 @@ cmd_destroy () {
         shift
         ;;
       -v|--ocp-version)
-        arg_version="-v $2"
+        arg_version="$2"
         shift
         shift
         ;;
@@ -391,7 +395,11 @@ cmd_destroy () {
     esac
   done
 
-  cmd_installer $arg_version
+  if [ -z "$arg_version" ]; then
+    arg_version=$(grep -m1 "OpenShift Installer" "$arg_dir/.openshift_install.log" | awk -F'Installer ' '{print $2}' | awk '{gsub(/"$/, ""); print $1}')
+    [ -z "$arg_version" ] && { echo "could not determine installer version in $arg_dir/.openshift_install.log"; exit 1; }
+  fi
+  cmd_installer -v $arg_version
 
   read -p "Will destroy cluster '$arg_dir'; ok? [yN] " yn
   case $yn in
