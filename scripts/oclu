@@ -184,6 +184,10 @@ create_openshift_cluster () {
   SSH_AUTH_SOCK= OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=$release_image_override $openshift_installer --dir="$cluster_path" create cluster
   echo "Cluster metadata stored in '$cluster_path'"
 
+  if command -v notify-send 2>&1 > /dev/null; then
+    notify-send "Cluster '$cluster_name' created successfully!"
+  fi
+
   # create 1p entry with console credentials
   echo "Will update 1p entry '$OP_ENTRY_OCP_CONSOLE' with URL and password"
   op_signin
