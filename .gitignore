@@ -9,3 +9,5 @@ repos/
 
 # payload source dir
 payload-src/
+
+tmp/
