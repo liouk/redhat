@@ -37,6 +37,7 @@ configure_jobs=(
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-gcp-external-oidc-configure-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-external-oidc-configure-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv4-external-oidc-configure-techpreview"
+    "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv6-external-oidc-configure-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-dualstack-external-oidc-configure-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-sno-external-oidc-configure-techpreview"
 )
@@ -47,6 +48,7 @@ rollback_jobs=(
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-gcp-external-oidc-rollback-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-external-oidc-rollback-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv4-external-oidc-rollback-techpreview"
+    "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv6-external-oidc-rollback-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-dualstack-external-oidc-rollback-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-sno-external-oidc-rollback-techpreview"
 )
@@ -57,11 +59,12 @@ uid_extra_jobs=(
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-azure-external-oidc-uid-extra-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-external-oidc-uid-extra-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv4-external-oidc-uid-extra-techpreview"
+    "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-ipv6-external-oidc-uid-extra-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-metal-ovn-dualstack-external-oidc-uid-extra-techpreview"
     "periodic-ci-openshift-cluster-authentication-operator-release-${RELEASE}-periodics-e2e-aws-sno-external-oidc-uid-extra-techpreview"
 )
 
-num_runs=5
+num_runs=${NUM_JOBS:-5}
 
 if [[ "$JOB_VARIANT" == "configure" || "$JOB_VARIANT" == "all" ]]; then
     for job in "${configure_jobs[@]}"; do
