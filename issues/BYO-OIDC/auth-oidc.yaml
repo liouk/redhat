@@ -21,6 +21,8 @@ spec:
     - componentName: "console"
       componentNamespace: "openshift-console"
       clientID: "console"
+      clientSecret:
+        name: openshift-console-oidc-client-secret
     claimMappings:
       username:
         claim: "email"
