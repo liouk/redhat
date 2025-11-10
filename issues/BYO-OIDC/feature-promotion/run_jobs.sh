@@ -82,7 +82,7 @@ if [[ "$JOB_VARIANT" == "configure" || "$JOB_VARIANT" == "all" ]]; then
             --num-jobs=${num_runs} \
             --jobs-file-path="runs/"
         echo "****************************"
-        sleep 60
+        sleep 30
     done
 fi
 
