@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"sort"
 	"strings"
 
@@ -31,6 +32,7 @@ func (s stringSet) add(e string) {
 }
 
 var quiet bool
+var dryRun bool
 
 var rootCmd = &cobra.Command{
 	Use:   "jira2gh <issue-id>...",
@@ -39,6 +41,7 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		quiet, _ = cmd.Flags().GetBool("quiet")
+		dryRun, _ = cmd.Flags().GetBool("dry-run")
 		ctx := context.Background()
 
 		cfg := &config.NewConfig{
@@ -93,6 +96,7 @@ func init() {
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
 	rootCmd.Flags().BoolP("quiet", "q", false, "Quiet mode: suppress all output, exit with 0=no new PRs, 1=new PRs found, 2=error")
+	rootCmd.Flags().BoolP("dry-run", "", false, "Dry-run mode: do not make any changes to the github project")
 }
 
 func main() {
@@ -331,6 +335,10 @@ func addToProject(ctx context.Context, proj *config.ProjectConfig, prs []string,
 }
 
 func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string) ([]byte, error) {
+	if dryRun {
+		return nil, nil
+	}
+
 	return exec.
 		CommandContext(ctx, "gh", "project", "item-add", proj.GitHubID, "--owner", proj.GitHubOwner, "--url", prURL).
 		CombinedOutput()
@@ -346,18 +354,14 @@ func shouldIgnorePR(prURL string, proj *config.ProjectConfig) bool {
 
 	ownerRepo := parts[3] + "/" + parts[4] // owner/repo format
 
-	for _, ignored := range proj.IgnoreRepos {
-		if ownerRepo == ignored {
-			return true
-		}
+	if slices.Contains(proj.IgnoreRepos, ownerRepo) {
+		return true
 	}
 
 	if len(proj.IgnorePRs) > 0 && len(parts) >= 7 {
 		prIdentifier := ownerRepo + "#" + parts[6]
-		for _, ignored := range proj.IgnorePRs {
-			if prIdentifier == ignored {
-				return true
-			}
+		if slices.Contains(proj.IgnorePRs, prIdentifier) {
+			return true
 		}
 	}
 
