@@ -27,11 +27,20 @@ type GitHubConfig struct {
 }
 
 type ProjectConfig struct {
-	GitHubID    string   `yaml:"github_id"`
-	GitHubOwner string   `yaml:"github_owner"`
-	Jiras       []string `yaml:"jiras"`
-	IgnoreRepos []string `yaml:"ignore_repos"`
-	IgnorePRs   []string `yaml:"ignore_prs"`
+	GitHubProject    string            `yaml:"github_project"`
+	GitHubProjectID  string            `yaml:"-"`
+	GitHubOwner      string            `yaml:"github_owner"`
+	Jiras            []string          `yaml:"jiras"`
+	IgnoreRepos      []string          `yaml:"ignore_repos"`
+	IgnorePRs        []string          `yaml:"ignore_prs"`
+	AssignFieldValue *GitHubFieldValue `yaml:"assign_field_value"`
+}
+
+type GitHubFieldValue struct {
+	Field   string `yaml:"field"`
+	FieldID string `yaml:"-"`
+	Value   string `yaml:"value"`
+	ValueID string `yaml:"-"`
 }
 
 func (cfg *NewConfig) CompleteFromFlags(ctx context.Context, cmd *cobra.Command, jiras []string) error {
@@ -52,8 +61,8 @@ func (cfg *NewConfig) CompleteFromFlags(ctx context.Context, cmd *cobra.Command,
 
 	cfg.Jira.Host = cmd.Flag("jira-host").Value.String()
 	proj := &ProjectConfig{
-		GitHubID: cmd.Flag("github-project-id").Value.String(),
-		Jiras:    jiras,
+		GitHubProject: cmd.Flag("github-project-id").Value.String(),
+		Jiras:         jiras,
 	}
 
 	ignoreReposStr := cmd.Flag("ignore-repos").Value.String()

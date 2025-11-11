@@ -101,7 +101,7 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 	if err != nil {
 		return err
 	}
-	config.Printf("Found %d PRs in GitHub Project %s/%s\n", len(githubPRs), proj.GitHubOwner, proj.GitHubID)
+	config.Printf("Found %d PRs in GitHub Project %s/%s\n", len(githubPRs), proj.GitHubOwner, proj.GitHubProject)
 
 	jiraPRs := map[string]struct{}{}
 	for _, id := range proj.Jiras {
