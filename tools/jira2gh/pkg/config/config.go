@@ -27,13 +27,12 @@ type GitHubConfig struct {
 }
 
 type ProjectConfig struct {
-	GitHubProject    string            `yaml:"github_project"`
-	GitHubProjectID  string            `yaml:"-"`
-	GitHubOwner      string            `yaml:"github_owner"`
-	Jiras            []string          `yaml:"jiras"`
-	IgnoreRepos      []string          `yaml:"ignore_repos"`
-	IgnorePRs        []string          `yaml:"ignore_prs"`
-	AssignFieldValue *GitHubFieldValue `yaml:"assign_field_value"`
+	GitHubProject   string   `yaml:"github_project"`
+	GitHubProjectID string   `yaml:"-"`
+	GitHubOwner     string   `yaml:"github_owner"`
+	Jiras           []string `yaml:"jiras"`
+	IgnoreRepos     []string `yaml:"ignore_repos"`
+	IgnorePRs       []string `yaml:"ignore_prs"`
 }
 
 type GitHubFieldValue struct {

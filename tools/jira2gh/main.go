@@ -9,9 +9,9 @@ import (
 	"jira2gh/pkg/config"
 	"jira2gh/pkg/github"
 	"jira2gh/pkg/jira"
+	"maps"
 	"os"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -22,6 +22,22 @@ const (
 	StatusCodeNewPRsFound
 	StatusCodeError
 )
+
+type prInfo struct {
+	repo   string // owner/repo
+	number string // PR number
+	issue  string
+	epic   string
+}
+
+func parsePRURL(url string) (owner, repo, number string) {
+	// URL format: https://github.com/owner/repo/pull/number
+	parts := strings.Split(url, "/")
+	if len(parts) >= 7 && parts[2] == "github.com" && parts[5] == "pull" {
+		return parts[3], parts[4], parts[6]
+	}
+	return "", "", ""
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "jira2gh <issue-id>...",
@@ -89,7 +105,7 @@ func main() {
 func run(ctx context.Context, cfg *config.NewConfig) error {
 	for _, proj := range cfg.Projects {
 		if err := runForProject(ctx, cfg.Jira, proj); err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -97,80 +113,179 @@ func run(ctx context.Context, cfg *config.NewConfig) error {
 }
 
 func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config.ProjectConfig) error {
+	config.Printf("Fetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
 	githubPRs, err := github.FetchGitHubPRs(ctx, proj)
 	if err != nil {
 		return err
 	}
-	config.Printf("Found %d PRs in GitHub Project %s/%s\n", len(githubPRs), proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("✓ Found %d PRs in project\n", len(githubPRs))
 
-	jiraPRs := map[string]struct{}{}
+	config.Println("\nChecking Jira issues for linked PRs...")
+	jiraPRs := map[string]jira.PR{}
 	for _, id := range proj.Jiras {
-		config.Println("Checking jira issue", id)
-		found, err := jira.ExtractJiraPRs(ctx, jiraCfg, id)
+		prs, err := jira.ExtractJiraPRs(ctx, jiraCfg, id)
 		if err != nil {
 			return err
 		}
+		prCount := len(prs)
+		maps.Copy(jiraPRs, prs)
+		totalCount := len(jiraPRs)
 
-		config.Printf("  => found '%d' PRs", len(found))
-
-		for pr := range found {
-			jiraPRs[pr] = struct{}{}
+		prCountWord := "PRs"
+		if prCount == 1 {
+			prCountWord = "PR"
 		}
+		config.Printf("  %-20s →  %d %s found (%d total)\n", id, prCount, prCountWord, totalCount)
 	}
 
+	prWord := "PRs"
+	if len(jiraPRs) == 1 {
+		prWord = "PR"
+	}
+	config.Printf("✓ Found %d unique %s across all Jira issues\n", len(jiraPRs), prWord)
+
 	if len(jiraPRs) == 0 {
-		config.Println("\n\nNo PRs found in Jira issues specified, skipping sync.")
+		config.Println("\nNo PRs found in Jira issues specified, skipping sync.")
 		return nil
 	}
 
-	newPRs := []string{}
-	for jiraPR, _ := range jiraPRs {
-		if _, exists := githubPRs[jiraPR]; !exists {
-			if !shouldIgnorePR(jiraPR, proj) {
+	newPRs := []jira.PR{}
+	for jiraPRUrl, jiraPR := range jiraPRs {
+		if _, exists := githubPRs[jiraPRUrl]; !exists {
+			if !shouldIgnorePR(jiraPRUrl, proj) {
 				newPRs = append(newPRs, jiraPR)
 			}
 		}
 	}
 
-	if len(newPRs) == 0 {
-		config.Println("\n\nNo new PRs found to add to GitHub project, skipping sync.")
-		return nil
-	} else {
-		sort.Strings(newPRs)
-		config.Printf("\n\n%d PRs do not exist in project yet:\n", len(newPRs))
-		for _, pr := range newPRs {
-			config.Println("  *", pr)
+	// Find PRs to remove: in GitHub with tracked epic, but no longer in Jira
+	removedPRs := []jira.PR{}
+	for url, ghPR := range githubPRs {
+		if ghPR.JiraEpic == "" {
+			continue
 		}
+		if !slices.Contains(proj.Jiras, ghPR.JiraEpic) {
+			continue
+		}
+		if _, stillInJira := jiraPRs[url]; !stillInJira {
+			if !shouldIgnorePR(url, proj) {
+				removedPRs = append(removedPRs, ghPR)
+			}
+		}
+	}
+
+	if len(newPRs) == 0 && len(removedPRs) == 0 {
+		config.Println("\nNo changes to sync.")
+		return nil
+	}
+
+	// Display new PRs to add
+	if len(newPRs) > 0 {
+		prWord = "PRs"
+		if len(newPRs) == 1 {
+			prWord = "PR"
+		}
+		config.Printf("\n%d new %s to add to project:\n", len(newPRs), prWord)
+		displayGroupedPRs(groupPRsByRepo(newPRs))
+	}
+
+	// Display PRs to remove
+	if len(removedPRs) > 0 {
+		prWord = "PRs"
+		if len(removedPRs) == 1 {
+			prWord = "PR"
+		}
+		config.Printf("\n%d %s no longer linked to tracked epics:\n", len(removedPRs), prWord)
+		displayGroupedPRs(groupPRsByRepo(removedPRs))
 	}
 
 	if config.Quiet {
 		os.Exit(StatusCodeNewPRsFound)
 	}
 
-	// Prompt for confirmation
-	fmt.Print("\nSync PRs to GitHub Project? [Y/n/i(nteractive)] ")
-	reader := bufio.NewReader(os.Stdin)
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("failed to read confirmation: %w", err)
+	// Prompt for additions
+	if len(newPRs) > 0 {
+		prWord = "PRs"
+		if len(newPRs) == 1 {
+			prWord = "PR"
+		}
+		fmt.Printf("\nAdd %d %s to GitHub Project? [Y/n] ", len(newPRs), prWord)
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response == "y" || response == "" {
+			if err := github.AddToProject(ctx, proj, newPRs); err != nil {
+				return err
+			}
+		}
 	}
 
-	// valid responses: y (yes), i (interactive), "" (yes)
-	response = strings.TrimSpace(strings.ToLower(response))
-	if response != "y" && response != "i" && response != "" {
-		config.Println("Aborting sync.")
-		return nil
-	}
-	interactive := strings.EqualFold(response, "i")
+	// Prompt for removals
+	if len(removedPRs) > 0 {
+		prWord = "PRs"
+		if len(removedPRs) == 1 {
+			prWord = "PR"
+		}
+		fmt.Printf("\nRemove %d %s from GitHub Project? [Y/n] ", len(removedPRs), prWord)
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
 
-	if err := github.AddToProject(ctx, proj, newPRs, interactive); err != nil {
-		return err
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response == "y" || response == "" {
+			if err := github.RemoveFromProject(ctx, proj, removedPRs); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-// shouldIgnorePR checks if a PR URL belongs to an ignored repository or is a specific ignored PR
+func groupPRsByRepo(prs []jira.PR) map[string][]prInfo {
+	prsByRepo := make(map[string][]prInfo)
+	for _, pr := range prs {
+		owner, repo, number := parsePRURL(pr.URL)
+		if owner == "" {
+			continue
+		}
+		repoKey := owner + "/" + repo
+		prsByRepo[repoKey] = append(prsByRepo[repoKey], prInfo{
+			repo:   repoKey,
+			number: number,
+			issue:  pr.JiraIssue,
+			epic:   pr.JiraEpic,
+		})
+	}
+	return prsByRepo
+}
+
+func displayGroupedPRs(prsByRepo map[string][]prInfo) {
+	repos := make([]string, 0, len(prsByRepo))
+	for repo := range prsByRepo {
+		repos = append(repos, repo)
+	}
+	slices.Sort(repos)
+
+	for _, repo := range repos {
+		prs := prsByRepo[repo]
+		slices.SortFunc(prs, func(a, b prInfo) int {
+			return strings.Compare(a.number, b.number)
+		})
+
+		config.Printf("\n  %s\n", repo)
+		for _, pr := range prs {
+			config.Printf("    • #%-6s %-20s (Epic: %s)\n", pr.number, pr.issue, pr.epic)
+		}
+	}
+}
+
 func shouldIgnorePR(prURL string, proj *config.ProjectConfig) bool {
 	// Extract owner/repo and PR number from URL (e.g., https://github.com/owner/repo/pull/123)
 	parts := strings.Split(prURL, "/")

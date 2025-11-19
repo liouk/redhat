@@ -1,19 +1,21 @@
 package github
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"jira2gh/pkg/config"
-	"os"
+	"jira2gh/pkg/jira"
 	"os/exec"
 	"strings"
 )
 
-var DryRun bool
+var (
+	DryRun   bool
+	fieldIDs = map[string]string{}
+)
 
-func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string]struct{}, error) {
+func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string]jira.PR, error) {
 	// Run gh CLI to fetch project items
 	cmd := exec.CommandContext(ctx, "gh", "project", "item-list", proj.GitHubProject, "--owner", proj.GitHubOwner, "--format", "json", "--limit", "1000")
 	output, err := cmd.Output()
@@ -26,9 +28,18 @@ func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string
 
 	var response struct {
 		Items []struct {
+			ID      string `json:"id"`
 			Content struct {
 				URL string `json:"url"`
 			} `json:"content"`
+			FieldValues struct {
+				Nodes []struct {
+					Field struct {
+						Name string `json:"name"`
+					} `json:"field"`
+					Text string `json:"text"`
+				} `json:"nodes"`
+			} `json:"fieldValues"`
 		} `json:"items"`
 	}
 
@@ -36,81 +47,101 @@ func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string
 		return nil, fmt.Errorf("failed to parse GitHub project items: %w", err)
 	}
 
-	// Extract URLs
-	prs := map[string]struct{}{}
+	// Extract PRs with metadata
+	prs := map[string]jira.PR{}
 	for _, item := range response.Items {
-		if item.Content.URL != "" {
-			prs[item.Content.URL] = struct{}{}
+		if item.Content.URL == "" {
+			continue
 		}
+
+		pr := jira.PR{
+			URL:    item.Content.URL,
+			ItemID: item.ID,
+		}
+
+		// Extract custom field values
+		for _, fieldValue := range item.FieldValues.Nodes {
+			switch fieldValue.Field.Name {
+			case "Jira Epic":
+				pr.JiraEpic = fieldValue.Text
+			case "Jira Issue":
+				pr.JiraIssue = fieldValue.Text
+			}
+		}
+
+		prs[pr.URL] = pr
 	}
 
 	return prs, nil
 }
 
-func AddToProject(ctx context.Context, proj *config.ProjectConfig, prs []string, interactive bool) error {
-	if proj.AssignFieldValue != nil {
-		projID, err := ghGetProjectID(ctx, proj)
+func AddToProject(ctx context.Context, proj *config.ProjectConfig, prs []jira.PR) error {
+	prWord := "PRs"
+	if len(prs) == 1 {
+		prWord = "PR"
+	}
+	config.Printf("\nSyncing %s to project %s/%s...\n", prWord, proj.GitHubOwner, proj.GitHubProject)
+
+	projID, err := ghGetProjectID(ctx, proj)
+	if err != nil {
+		return fmt.Errorf("could not get project ID: %v", err)
+	}
+	proj.GitHubProjectID = projID
+
+	for _, pr := range prs {
+		// Parse URL to get short format: owner/repo#number
+		shortPR := formatPRShort(pr.URL)
+		err := ghItemAdd(ctx, proj, pr.URL, pr.Metadata())
 		if err != nil {
 			return err
 		}
-		proj.GitHubProjectID = projID
-
-		fieldID, valueID, err := ghGetFieldValue(ctx, proj)
-		if err != nil {
-			return err
-		}
-		proj.AssignFieldValue.FieldID = fieldID
-		proj.AssignFieldValue.ValueID = valueID
+		config.Printf("  ✓ %s\n", shortPR)
 	}
 
-	config.Printf("\nAdding %d PRs to GitHub project %s/%s...\n", len(prs), proj.GitHubOwner, proj.GitHubProject)
-
-	if interactive {
-		for _, prURL := range prs {
-			config.Printf("  * %s (Y/n) ", prURL)
-			reader := bufio.NewReader(os.Stdin)
-			response, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("failed to read confirmation: %w", err)
-			}
-
-			response = strings.TrimSpace(strings.ToLower(response))
-			switch response {
-			case "q":
-				config.Println("Abort.")
-				return nil
-
-			case "y", "":
-				err := ghItemAdd(ctx, proj, prURL)
-				if err != nil {
-					config.Println()
-					return err
-				}
-				config.Println("  => added")
-
-			default:
-				config.Println("  => skipped")
-			}
-
-		}
-		return nil
-	}
-
-	for _, prURL := range prs {
-		config.Printf("  * %s ... ", prURL)
-		err := ghItemAdd(ctx, proj, prURL)
-		if err != nil {
-			config.Println()
-			return err
-		}
-		config.Println("ok")
-	}
-
-	config.Printf("\nSuccessfully added all %d PRs to the project!\n", len(prs))
+	config.Printf("\n✓ Successfully added %d %s to the project!\n", len(prs), prWord)
 	return nil
 }
 
-func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string) error {
+func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []jira.PR) error {
+	prWord := "PRs"
+	if len(prs) == 1 {
+		prWord = "PR"
+	}
+	config.Printf("\nRemoving %s from project %s/%s...\n", prWord, proj.GitHubOwner, proj.GitHubProject)
+
+	for _, pr := range prs {
+		shortPR := formatPRShort(pr.URL)
+		if DryRun {
+			config.Printf("  ✓ %s (dry-run)\n", shortPR)
+			continue
+		}
+
+		_, err := exec.CommandContext(ctx, "gh", "project",
+			"item-delete", proj.GitHubProject,
+			"--owner", proj.GitHubOwner,
+			"--id", pr.ItemID,
+		).CombinedOutput()
+
+		if err != nil {
+			return fmt.Errorf("failed to remove %s: %v", shortPR, err)
+		}
+		config.Printf("  ✓ %s\n", shortPR)
+	}
+
+	config.Printf("\n✓ Successfully removed %d %s from the project!\n", len(prs), prWord)
+	return nil
+}
+
+func formatPRShort(url string) string {
+	// URL format: https://github.com/owner/repo/pull/number
+	parts := strings.Split(url, "/")
+	if len(parts) >= 7 && parts[2] == "github.com" && parts[5] == "pull" {
+		return parts[3] + "/" + parts[4] + "#" + parts[6]
+	}
+	return url
+}
+
+func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, metadata map[string]string) error {
 	if DryRun {
 		return nil
 	}
@@ -130,27 +161,27 @@ func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string) er
 		return fmt.Errorf("could not unmarshal response from json: %v", err)
 	}
 
-	if proj.AssignFieldValue != nil {
-		return ghItemEdit(ctx, proj, item["id"].(string))
+	itemID := item["id"].(string)
+	for key, value := range metadata {
+		if len(key) == 0 || len(value) == 0 {
+			continue
+		}
+
+		if _, found := fieldIDs[key]; !found {
+			if fieldID, err := ghGetFieldID(ctx, proj, key); err != nil {
+				return fmt.Errorf("failed to get ID for field '%s': %v", key, err)
+			} else {
+				fieldIDs[key] = fieldID
+			}
+		}
+
+		err := ghItemEdit(ctx, proj.GitHubProjectID, itemID, "text", fieldIDs[key], value)
+		if err != nil {
+			return fmt.Errorf("failed to edit item: %v", err)
+		}
 	}
 
 	return nil
-}
-
-func ghItemEdit(ctx context.Context, proj *config.ProjectConfig, itemID string) error {
-	if DryRun {
-		return nil
-	}
-
-	_, err := exec.
-		CommandContext(ctx, "gh", "project", "item-edit",
-			"--project-id", proj.GitHubProjectID,
-			"--id", itemID,
-			"--field-id", proj.AssignFieldValue.FieldID,
-			"--single-select-option-id", proj.AssignFieldValue.ValueID,
-		).CombinedOutput()
-
-	return err
 }
 
 func ghGetProjectID(ctx context.Context, proj *config.ProjectConfig) (string, error) {
@@ -175,78 +206,65 @@ func ghGetProjectID(ctx context.Context, proj *config.ProjectConfig) (string, er
 	return p.ID, nil
 }
 
-func ghGetFieldValue(ctx context.Context, proj *config.ProjectConfig) (string, string, error) {
-	type ghFields struct {
-		Fields []struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Options []struct {
-				ID   string `json:"id"`
-				Name string `json:"name"`
-			} `json:"options"`
-		} `json:"fields"`
-	}
-
-	out, err := exec.CommandContext(ctx, "gh", "project",
+// ghGetFieldID retrieves the field ID for a given field name from the GitHub project
+func ghGetFieldID(ctx context.Context, proj *config.ProjectConfig, fieldName string) (string, error) {
+	// Run gh CLI to fetch project fields
+	cmd := exec.CommandContext(ctx, "gh", "project",
 		"field-list", proj.GitHubProject,
 		"--owner", proj.GitHubOwner,
 		"--format", "json",
-	).CombinedOutput()
+	)
+	output, err := cmd.Output()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get project ID: %v", err)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("failed to fetch project fields: %w\nstderr: %s", err, string(exitErr.Stderr))
+		}
+		return "", fmt.Errorf("failed to fetch project fields: %w", err)
 	}
 
-	var fields ghFields
-	if err := json.Unmarshal(out, &fields); err != nil {
-		return "", "", fmt.Errorf("could not unmarshal response from json: %v", err)
+	var response struct {
+		Fields []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"fields"`
 	}
 
-	var fieldID, valueID string
+	if err := json.Unmarshal(output, &response); err != nil {
+		return "", fmt.Errorf("failed to parse project fields: %w", err)
+	}
 
-	for _, field := range fields.Fields {
-		if field.Name == proj.AssignFieldValue.Field {
-			fieldID = field.ID
-
-			for _, value := range field.Options {
-				if value.Name == proj.AssignFieldValue.Value {
-					valueID = value.ID
-					break
-				}
-			}
-
-			break
+	// Find the field with matching name
+	for _, field := range response.Fields {
+		if field.Name == fieldName {
+			return field.ID, nil
 		}
 	}
 
-	if len(fieldID) == 0 {
-		return "", "", fmt.Errorf("field %s not found in project %s", proj.AssignFieldValue.Field, proj.GitHubProject)
-	}
-
-	if len(valueID) == 0 {
-		return "", "", fmt.Errorf("value %s not found in project %s", proj.AssignFieldValue.Value, proj.GitHubProject)
-	}
-
-	return fieldID, valueID, nil
+	return "", fmt.Errorf("field '%s' not found in project", fieldName)
 }
 
-func ghGetItemID(ctx context.Context, proj *config.ProjectConfig) (string, error) {
-	type ghProject struct {
-		ID string `json:"id"`
+func ghItemEdit(ctx context.Context, projectID, itemID, fieldType, fieldID, value string) error {
+	if DryRun {
+		return nil
 	}
 
-	out, err := exec.CommandContext(ctx, "gh", "project",
-		"view", proj.GitHubProject,
-		"--owner", proj.GitHubOwner,
-		"--format", "json",
-	).CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to get project ID: %v", err)
+	valueArg := ""
+	switch fieldType {
+	case "text":
+		valueArg = "--text"
+	case "option":
+		valueArg = "--single-select-option-id"
+	default:
+		return fmt.Errorf("unknown field type: %s", fieldType)
 	}
 
-	var p ghProject
-	if err := json.Unmarshal(out, &p); err != nil {
-		return "", fmt.Errorf("could not unmarshal response from json: %v", err)
-	}
+	_, err := exec.
+		CommandContext(ctx, "gh", "project", "item-edit",
+			"--project-id", projectID,
+			"--id", itemID,
+			"--field-id", fieldID,
+			valueArg, value,
+		).CombinedOutput()
 
-	return p.ID, nil
+	return err
 }
