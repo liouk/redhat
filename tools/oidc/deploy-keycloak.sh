@@ -206,14 +206,14 @@ kind: ConfigMap
 metadata:
   name: keycloak-${NAMESPACE}-ca
 data:
-  ca.crt: |
+  ca-bundle.crt: |
 $(echo "${CA_BUNDLE}" | sed 's/^/    /')
 EOF
 echo "CA ConfigMap created: keycloak-${NAMESPACE}-ca"
 
 # Create dummy client secret for console in openshift-console namespace
 echo "Creating dummy client secret in openshift-console namespace..."
-cat <<EOF | oc apply -n openshift-console -f -
+cat <<EOF | oc apply -n openshift-config -f -
 apiVersion: v1
 kind: Secret
 metadata:
