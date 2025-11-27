@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Configuration
-NAMESPACE_PREFIX="${NAMESPACE_PREFIX:-e2e-test-authentication-operator}"
+NAMESPACE_PREFIX="${NAMESPACE_PREFIX:-oidc-keycloak}"
 KEYCLOAK_IMAGE="${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:25.0}"
 KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-password}"
@@ -23,7 +23,6 @@ kind: Namespace
 metadata:
   name: ${NAMESPACE}
   labels:
-    e2e-test: openshift-authentication-operator
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/audit: privileged
     pod-security.kubernetes.io/warn: privileged
@@ -60,13 +59,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pod-svc
-  labels:
-    e2e-test: openshift-authentication-operator
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: serving-secret
 spec:
   selector:
-    app: e2e-tested-app
+    app: oidc-keycloak-app
   ports:
   - name: https
     port: 8443
@@ -97,17 +94,17 @@ kind: Deployment
 metadata:
   name: keycloak
   labels:
-    app: e2e-tested-app
+    app: oidc-keycloak-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: e2e-tested-app
+      app: oidc-keycloak-app
   template:
     metadata:
       name: keycloak
       labels:
-        app: e2e-tested-app
+        app: oidc-keycloak-app
     spec:
       serviceAccountName: keycloak
       containers:
@@ -208,8 +205,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: keycloak-${NAMESPACE}-ca
-  labels:
-    e2e-test: openshift-authentication-operator
 data:
   ca.crt: |
 $(echo "${CA_BUNDLE}" | sed 's/^/    /')
@@ -223,8 +218,6 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: openshift-console-oidc-client-secret
-  labels:
-    e2e-test: openshift-authentication-operator
 type: Opaque
 stringData:
   clientSecret: "REPLACE_WITH_ACTUAL_CLIENT_SECRET_FROM_KEYCLOAK"
