@@ -26,8 +26,12 @@ const (
 type prInfo struct {
 	repo   string // owner/repo
 	number string // PR number
+	title  string // PR title
+	author string // PR author
+	state  string // PR state
 	issue  string
 	epic   string
+	url    string // PR URL
 }
 
 func parsePRURL(url string) (owner, repo, number string) {
@@ -136,6 +140,29 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 			prCountWord = "PR"
 		}
 		config.Printf("  %-20s →  %d %s found (%d total)\n", id, prCount, prCountWord, totalCount)
+	}
+
+	// Enrich PRs with GitHub details (author, state)
+	config.Println("\nFetching PR details from GitHub...")
+	for url, pr := range jiraPRs {
+		author, state, err := github.FetchPRDetails(ctx, url)
+		if err != nil {
+			config.Printf("  Warning: could not fetch details for %s: %v\n", url, err)
+			continue
+		}
+		pr.Author = author
+		pr.State = state
+		jiraPRs[url] = pr
+	}
+	for url, pr := range githubPRs {
+		author, state, err := github.FetchPRDetails(ctx, url)
+		if err != nil {
+			config.Printf("  Warning: could not fetch details for %s: %v\n", url, err)
+			continue
+		}
+		pr.Author = author
+		pr.State = state
+		githubPRs[url] = pr
 	}
 
 	prWord := "PRs"
@@ -259,8 +286,12 @@ func groupPRsByRepo(prs []jira.PR) map[string][]prInfo {
 		prsByRepo[repoKey] = append(prsByRepo[repoKey], prInfo{
 			repo:   repoKey,
 			number: number,
+			title:  pr.Title,
+			author: pr.Author,
+			state:  pr.State,
 			issue:  pr.JiraIssue,
 			epic:   pr.JiraEpic,
+			url:    pr.URL,
 		})
 	}
 	return prsByRepo
@@ -281,7 +312,10 @@ func displayGroupedPRs(prsByRepo map[string][]prInfo) {
 
 		config.Printf("\n  %s\n", repo)
 		for _, pr := range prs {
-			config.Printf("    • #%-6s %-20s (Epic: %s)\n", pr.number, pr.issue, pr.epic)
+			config.Printf("    • #%s  %s\n", pr.number, pr.title)
+			config.Printf("      Author: %-20s State: %s\n", pr.author, pr.state)
+			config.Printf("      Jira: %-20s Epic: %s\n", pr.issue, pr.epic)
+			config.Printf("      Link: %s\n", pr.url)
 		}
 	}
 }

@@ -13,6 +13,9 @@ import (
 
 type PR struct {
 	URL       string
+	Title     string
+	Author    string
+	State     string
 	JiraEpic  string
 	JiraIssue string
 	ItemID    string
@@ -80,6 +83,7 @@ func ExtractJiraPRs(ctx context.Context, jira *config.JiraConfig, issueID string
 			}
 			prs[url] = PR{
 				URL:       url,
+				Title:     link.Object.Title,
 				JiraIssue: issue,
 				JiraEpic:  epic,
 			}

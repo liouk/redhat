@@ -141,6 +141,28 @@ func formatPRShort(url string) string {
 	return url
 }
 
+// FetchPRDetails fetches PR details (author, state) from GitHub
+func FetchPRDetails(ctx context.Context, prURL string) (author, state string, err error) {
+	cmd := exec.CommandContext(ctx, "gh", "pr", "view", prURL, "--json", "author,state")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch PR details: %w", err)
+	}
+
+	var response struct {
+		Author struct {
+			Login string `json:"login"`
+		} `json:"author"`
+		State string `json:"state"`
+	}
+
+	if err := json.Unmarshal(output, &response); err != nil {
+		return "", "", fmt.Errorf("failed to parse PR details: %w", err)
+	}
+
+	return response.Author.Login, response.State, nil
+}
+
 func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, metadata map[string]string) error {
 	if DryRun {
 		return nil
