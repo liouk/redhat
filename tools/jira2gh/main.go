@@ -72,7 +72,8 @@ var rootCmd = &cobra.Command{
 
 		var err error
 		if cfgFile := cmd.Flag("config").Value.String(); len(cfgFile) > 0 {
-			err = cfg.CompleteFromFile(cfgFile)
+			projectFilter := cmd.Flag("project").Value.String()
+			err = cfg.CompleteFromFile(cfgFile, projectFilter)
 		} else {
 			err = cfg.CompleteFromFlags(ctx, cmd, args)
 		}
@@ -91,6 +92,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Flags().String("config", "", "yaml config file to use (has priority over CLI flags)")
+	rootCmd.Flags().String("project", "", "when using --config, filter to only run for the project with this github_project value")
 	rootCmd.Flags().String("jira-host", "", "Jira host URL (e.g., https://issues.redhat.com)")
 	rootCmd.Flags().String("github-project-id", "", "Self-explanatory")
 	rootCmd.Flags().String("github-owner", "", "GitHub owner (user or org). If not provided, will be fetched from GitHub CLI")

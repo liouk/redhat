@@ -82,7 +82,7 @@ func (cfg *NewConfig) CompleteFromFlags(ctx context.Context, cmd *cobra.Command,
 	return nil
 }
 
-func (cfg *NewConfig) CompleteFromFile(filename string) error {
+func (cfg *NewConfig) CompleteFromFile(filename string, projectFilter string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read config file %s: %w", filename, err)
@@ -90,6 +90,20 @@ func (cfg *NewConfig) CompleteFromFile(filename string) error {
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return fmt.Errorf("failed to parse YAML from %s: %w", filename, err)
+	}
+
+	// Filter projects if a project filter is specified
+	if projectFilter != "" {
+		filtered := []*ProjectConfig{}
+		for _, proj := range cfg.Projects {
+			if proj.GitHubProject == projectFilter {
+				filtered = append(filtered, proj)
+			}
+		}
+		if len(filtered) == 0 {
+			return fmt.Errorf("no project found with github_project=%s", projectFilter)
+		}
+		cfg.Projects = filtered
 	}
 
 	return nil
