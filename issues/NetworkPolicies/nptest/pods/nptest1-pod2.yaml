@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nptest1-pod2
+  namespace: nptest1
+  labels:
+    app: nptest
+    pod: pod2
+    ns: ns1
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: test-container
+    image: registry.access.redhat.com/ubi9/nginx-120:latest
+    command: ["/bin/bash", "-c"]
+    args: ["nginx -g 'daemon off;'"]
+    ports:
+    - containerPort: 8080
+      name: http
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL

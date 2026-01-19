@@ -1,0 +1,59 @@
+# Allow nptest1-pod1 to communicate with nptest2-pod1
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-pod1-cross-ns
+  namespace: nptest1
+spec:
+  podSelector:
+    matchLabels:
+      pod: pod1
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nptest2
+      podSelector:
+        matchLabels:
+          pod: pod1
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nptest2
+      podSelector:
+        matchLabels:
+          pod: pod1
+---
+# Allow nptest2-pod1 to communicate with nptest1-pod1
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-pod1-cross-ns
+  namespace: nptest2
+spec:
+  podSelector:
+    matchLabels:
+      pod: pod1
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nptest1
+      podSelector:
+        matchLabels:
+          pod: pod1
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nptest1
+      podSelector:
+        matchLabels:
+          pod: pod1
