@@ -1,0 +1,279 @@
+apiVersion: flows.netobserv.io/v1beta2
+kind: FlowCollector
+metadata:
+  annotations:
+    flows.netobserv.io/flowcollectorlegacy-namespace: netobserv
+    flows.netobserv.io/flpparent-namespace: netobserv
+  creationTimestamp: "2026-01-19T15:57:14Z"
+  generation: 2
+  name: cluster
+  resourceVersion: "52517"
+  uid: 736f9f49-8814-4e7d-a41a-ce6d311a1093
+spec:
+  agent:
+    ebpf:
+      cacheActiveTimeout: 5s
+      cacheMaxFlows: 100000
+      excludeInterfaces:
+      - lo
+      imagePullPolicy: IfNotPresent
+      kafkaBatchSize: 1048576
+      logLevel: info
+      metrics:
+        server:
+          port: 9400
+          tls:
+            insecureSkipVerify: false
+            type: Disabled
+      resources:
+        limits:
+          memory: 800Mi
+        requests:
+          cpu: 100m
+          memory: 50Mi
+      sampling: 50
+    ipfix:
+      cacheActiveTimeout: 20s
+      cacheMaxFlows: 400
+      clusterNetworkOperator:
+        namespace: openshift-network-operator
+      forceSampleAll: false
+      ovnKubernetes:
+        containerName: ovnkube-node
+        daemonSetName: ovnkube-node
+        namespace: ovn-kubernetes
+      sampling: 400
+    type: eBPF
+  consolePlugin:
+    advanced:
+      port: 9001
+      register: true
+    autoscaler:
+      maxReplicas: 3
+      metrics:
+      - resource:
+          name: cpu
+          target:
+            averageUtilization: 50
+            type: Utilization
+        type: Resource
+      minReplicas: 1
+      status: Disabled
+    enable: true
+    imagePullPolicy: IfNotPresent
+    logLevel: info
+    portNaming:
+      enable: true
+      portNames:
+        "3100": loki
+    quickFilters:
+    - default: true
+      filter:
+        flow_layer: '"app"'
+      name: Applications
+    - filter:
+        flow_layer: '"infra"'
+      name: Infrastructure
+    - default: true
+      filter:
+        dst_kind: '"Pod"'
+        src_kind: '"Pod"'
+      name: Pods network
+    - filter:
+        dst_kind: '"Service"'
+      name: Services network
+    replicas: 1
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: 100m
+        memory: 50Mi
+  deploymentModel: Direct
+  kafka:
+    address: kafka-cluster-kafka-bootstrap.netobserv
+    sasl:
+      clientIDReference:
+        namespace: ""
+      clientSecretReference:
+        namespace: ""
+      type: Disabled
+    tls:
+      caCert:
+        certFile: ca.crt
+        name: kafka-cluster-cluster-ca-cert
+        namespace: ""
+        type: secret
+      enable: false
+      insecureSkipVerify: false
+      userCert:
+        certFile: user.crt
+        certKey: user.key
+        name: flp-kafka
+        namespace: ""
+        type: secret
+    topic: network-flows
+  loki:
+    advanced:
+      staticLabels:
+        app: netobserv-flowcollector
+      writeMaxBackoff: 5s
+      writeMaxRetries: 2
+      writeMinBackoff: 1s
+    enable: true
+    lokiStack:
+      name: loki
+    manual:
+      authToken: Disabled
+      ingesterUrl: http://loki:3100/
+      querierUrl: http://loki:3100/
+      statusTls:
+        caCert:
+          namespace: ""
+        enable: false
+        insecureSkipVerify: false
+        userCert:
+          namespace: ""
+      tenantID: netobserv
+      tls:
+        caCert:
+          namespace: ""
+        enable: false
+        insecureSkipVerify: false
+        userCert:
+          namespace: ""
+    microservices:
+      ingesterUrl: http://loki-distributor:3100/
+      querierUrl: http://loki-query-frontend:3100/
+      tenantID: netobserv
+      tls:
+        caCert:
+          namespace: ""
+        enable: false
+        insecureSkipVerify: false
+        userCert:
+          namespace: ""
+    mode: Monolithic
+    monolithic:
+      tenantID: netobserv
+      tls:
+        caCert:
+          certFile: service-ca.crt
+          name: loki-gateway-ca-bundle
+          namespace: ""
+          type: configmap
+        enable: false
+        insecureSkipVerify: false
+        userCert:
+          namespace: ""
+      url: http://loki.netobserv.svc:3100/
+    readTimeout: 30s
+    writeBatchSize: 10485760
+    writeBatchWait: 1s
+    writeTimeout: 10s
+  namespace: netobserv
+  networkPolicy:
+    enable: true
+  processor:
+    advanced:
+      conversationEndTimeout: 10s
+      conversationHeartbeatInterval: 30s
+      conversationTerminatingTimeout: 5s
+      dropUnusedFields: true
+      enableKubeProbes: true
+      healthPort: 8080
+      port: 2055
+    clusterName: ""
+    deduper:
+      mode: Disabled
+      sampling: 50
+    imagePullPolicy: IfNotPresent
+    kafkaConsumerAutoscaler:
+      maxReplicas: 0
+      status: Disabled
+    kafkaConsumerBatchSize: 10485760
+    kafkaConsumerQueueCapacity: 1000
+    kafkaConsumerReplicas: 3
+    logLevel: info
+    logTypes: Flows
+    metrics:
+      server:
+        port: 9401
+        tls:
+          insecureSkipVerify: false
+          type: Disabled
+    multiClusterDeployment: false
+    resources:
+      limits:
+        memory: 800Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+    subnetLabels: {}
+  prometheus:
+    querier:
+      enable: true
+      manual:
+        forwardUserToken: false
+        tls:
+          caCert:
+            namespace: ""
+          enable: false
+          insecureSkipVerify: false
+          userCert:
+            namespace: ""
+        url: http://prometheus:9090
+      mode: Auto
+      timeout: 30s
+status:
+  conditions:
+  - lastTransitionTime: "2026-01-19T15:57:16Z"
+    message: 6 ready components, 0 with failure, 0 pending
+    reason: Ready
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingStaticPlugin
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingNetworkPolicy
+  - lastTransitionTime: "2026-01-19T15:57:15Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingFlowCollectorLegacy
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingMonitoring
+  - lastTransitionTime: "2026-01-19T15:57:27Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingFLPParent
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: ""
+    reason: Valid
+    status: "False"
+    type: ConfigurationIssue
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: Loki is not configured in LokiStack mode
+    reason: Unused
+    status: Unknown
+    type: LokiIssue
+  - lastTransitionTime: "2026-01-19T15:57:16Z"
+    message: ""
+    reason: Ready
+    status: "False"
+    type: WaitingFLPMonolith
+  - lastTransitionTime: "2026-01-19T15:57:14Z"
+    message: Transformer only used with Kafka
+    reason: ComponentUnused
+    status: Unknown
+    type: WaitingFLPTransformer
