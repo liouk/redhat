@@ -9,12 +9,22 @@ START_TIME=$(date -u -d '10 minutes ago' +%s)000000000
 
 OUTPUT_FILE="network_flows_$(date +%Y%m%d_%H%M%S).csv"
 
+# Build Loki query with optional namespace filter
+if [ $# -gt 0 ]; then
+  # Join namespace arguments with | for regex matching
+  NAMESPACE_REGEX=$(IFS='|'; echo "$*")
+  # Match on EITHER source OR destination namespace
+  LOKI_QUERY="{app=\"netobserv-flowcollector\", SrcK8S_Namespace=~\"$NAMESPACE_REGEX\"} or {app=\"netobserv-flowcollector\", DstK8S_Namespace=~\"$NAMESPACE_REGEX\"}"
+else
+  LOKI_QUERY="{app=\"netobserv-flowcollector\"}"
+fi
+
 # Create CSV with header
 echo "SourceNamespace,SourcePod,SourceIP,DestNamespace,DestPod,DestIP,Protocol,DestPort" > "$OUTPUT_FILE"
 
 # Append data - namespace is in Loki labels, not flow body
 curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={app="netobserv-flowcollector"}' \
+  --data-urlencode "query=$LOKI_QUERY" \
   --data-urlencode "start=$START_TIME" \
   --data-urlencode "end=$END_TIME" \
   --data-urlencode 'limit=5000' | \
@@ -22,13 +32,14 @@ curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
     ($labels.SrcK8S_Namespace // "") as $srcNs |
     ($labels.DstK8S_Namespace // "") as $dstNs |
     .[1] | fromjson |
+    select(.FlowDirection == 0) |
     [$srcNs,
      .SrcK8S_Name // "",
      .SrcAddr // "",
      $dstNs,
      .DstK8S_Name // "",
      .DstAddr // "",
-     (if .Proto == "6" then "TCP" elif .Proto == "17" then "UDP" else .Proto end),
+     (if .Proto == 6 then "TCP" elif .Proto == 17 then "UDP" else .Proto end),
      .DstPort // ""] | @csv' | \
   sort -u >> "$OUTPUT_FILE"
 
