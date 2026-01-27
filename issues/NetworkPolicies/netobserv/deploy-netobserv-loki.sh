@@ -38,8 +38,22 @@ spec:
   sourceNamespace: openshift-marketplace
 EOF
 
-# Wait for the FlowCollector CRD
-oc wait --for condition=established --timeout=180s crd/flowcollectors.flows.netobserv.io
+# Wait for the FlowCollector CRD to appear
+echo "Waiting for FlowCollector CRD to be created..."
+TIMEOUT=180
+ELAPSED=0
+while ! oc get crd flowcollectors.flows.netobserv.io &>/dev/null; do
+  if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo "Timeout waiting for FlowCollector CRD"
+    exit 1
+  fi
+  sleep 2
+  ELAPSED=$((ELAPSED + 2))
+done
+
+# Wait for it to be established
+echo "CRD found, waiting for it to be established..."
+oc wait --for condition=established --timeout=30s crd/flowcollectors.flows.netobserv.io
 
 # create a basic FlowCollector with loki
 oc apply -f flowcollector.yaml
