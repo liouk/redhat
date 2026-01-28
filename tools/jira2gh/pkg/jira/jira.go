@@ -63,7 +63,8 @@ func ExtractJiraPRs(ctx context.Context, jira *config.JiraConfig, issueID string
 		if err != nil {
 			return nil, err
 		}
-		issuesToScrape = linkedIssues
+		// Include the Epic itself to capture PRs linked directly to it
+		issuesToScrape = append([]string{issueID}, linkedIssues...)
 	default:
 		epic = issueType.Fields.ParentEpic
 		issuesToScrape = []string{issueID}

@@ -316,7 +316,7 @@ func displayGroupedPRs(prsByRepo map[string][]prInfo) {
 		for _, pr := range prs {
 			config.Printf("    • #%s  %s\n", pr.number, pr.title)
 			config.Printf("      Author: %-20s State: %s\n", pr.author, pr.state)
-			config.Printf("      Jira: %-20s Epic: %s\n", pr.issue, pr.epic)
+			config.Printf("      Jira:   %-20s Epic: %s\n", pr.issue, pr.epic)
 			config.Printf("      Link: %s\n", pr.url)
 		}
 	}
