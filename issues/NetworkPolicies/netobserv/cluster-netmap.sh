@@ -1,23 +1,31 @@
 #!/usr/bin/env bash
 
-oc port-forward -n netobserv svc/loki 3100:3100 &
-PF_PID=$!
-sleep 3
+# Check if port 3100 is already accessible
+if ! curl -s http://localhost:3100/ready >/dev/null 2>&1; then
+  # Port not accessible, start port-forward
+  oc port-forward -n netobserv svc/loki 3100:3100 &
+  PF_PID=$!
+  sleep 3
+else
+  # Port already forwarded, reuse it
+  PF_PID=""
+fi
 
 END_TIME=$(date -u +%s)000000000
 START_TIME=$(date -u -d '10 minutes ago' +%s)000000000
 
 OUTPUT_FILE="network_flows_$(date +%Y%m%d_%H%M%S).csv"
 
-# Build Loki query with optional namespace filter
+# Build namespace filter for jq
 if [ $# -gt 0 ]; then
-  # Join namespace arguments with | for regex matching
-  NAMESPACE_REGEX=$(IFS='|'; echo "$*")
-  # Match on EITHER source OR destination namespace
-  LOKI_QUERY="{app=\"netobserv-flowcollector\", SrcK8S_Namespace=~\"$NAMESPACE_REGEX\"} or {app=\"netobserv-flowcollector\", DstK8S_Namespace=~\"$NAMESPACE_REGEX\"}"
+  # Store namespaces as array for jq filtering
+  NAMESPACES="$*"
 else
-  LOKI_QUERY="{app=\"netobserv-flowcollector\"}"
+  NAMESPACES=""
 fi
+
+# Simple Loki query - filtering by namespace happens in jq
+LOKI_QUERY="{app=\"netobserv-flowcollector\"}"
 
 # Create CSV with header
 echo "SourceNamespace,SourcePod,SourceIP,DestNamespace,DestPod,DestIP,Protocol,DestPort" > "$OUTPUT_FILE"
@@ -28,11 +36,22 @@ curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
   --data-urlencode "start=$START_TIME" \
   --data-urlencode "end=$END_TIME" \
   --data-urlencode 'limit=5000' | \
-  jq -r '.data.result[] | .stream as $labels | .values[] |
+  jq -r --arg namespaces "$NAMESPACES" '
+    ($namespaces | split(" ") | map(select(. != ""))) as $ns_filter |
+    .data.result[] | .stream as $labels | .values[] |
     ($labels.SrcK8S_Namespace // "") as $srcNs |
     ($labels.DstK8S_Namespace // "") as $dstNs |
+    ($labels.FlowDirection // "") as $flowDir |
     .[1] | fromjson |
-    select(.FlowDirection == 0) |
+    select($flowDir == "0") |
+    select((.DstPort // 0) > 0 and (.DstPort // 0) < 32768) |
+    select(
+      if ($ns_filter | length) > 0 then
+        ($ns_filter | index($srcNs)) != null or ($ns_filter | index($dstNs)) != null
+      else
+        true
+      end
+    ) |
     [$srcNs,
      .SrcK8S_Name // "",
      .SrcAddr // "",
@@ -46,4 +65,7 @@ curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
 echo "Flows exported to: $OUTPUT_FILE"
 echo "Total flows: $(wc -l < "$OUTPUT_FILE" | xargs echo $(($(cat) - 1)))"
 
-kill $PF_PID 2>/dev/null
+# Only kill port-forward if we started it
+if [ -n "$PF_PID" ]; then
+  kill $PF_PID 2>/dev/null
+fi
