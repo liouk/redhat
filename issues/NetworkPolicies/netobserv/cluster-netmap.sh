@@ -16,42 +16,30 @@ START_TIME=$(date -u -d '10 minutes ago' +%s)000000000
 
 OUTPUT_FILE="network_flows_$(date +%Y%m%d_%H%M%S).csv"
 
-# Build namespace filter for jq
+# Build Loki query with namespace and FlowDirection filters
 if [ $# -gt 0 ]; then
-  # Store namespaces as array for jq filtering
-  NAMESPACES="$*"
+  # Join namespace arguments with | for regex matching
+  NAMESPACE_REGEX=$(IFS='|'; echo "$*")
+  # Query for flows where EITHER source OR destination namespace matches
+  # FlowDirection="0" filters for egress/initiator flows at Loki level
+  LOKI_QUERY="{app=\"netobserv-flowcollector\", FlowDirection=\"0\", SrcK8S_Namespace=~\"$NAMESPACE_REGEX\"} or {app=\"netobserv-flowcollector\", FlowDirection=\"0\", DstK8S_Namespace=~\"$NAMESPACE_REGEX\"}"
 else
-  NAMESPACES=""
+  # No namespace filter - just get all egress flows
+  LOKI_QUERY="{app=\"netobserv-flowcollector\", FlowDirection=\"0\"}"
 fi
-
-# Simple Loki query - filtering by namespace happens in jq
-LOKI_QUERY="{app=\"netobserv-flowcollector\"}"
 
 # Create CSV with header
 echo "SourceNamespace,SourcePod,SourceIP,DestNamespace,DestPod,DestIP,Protocol,DestPort" > "$OUTPUT_FILE"
 
-# Append data - namespace is in Loki labels, not flow body
-curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode "query=$LOKI_QUERY" \
-  --data-urlencode "start=$START_TIME" \
-  --data-urlencode "end=$END_TIME" \
-  --data-urlencode 'limit=5000' | \
-  jq -r --arg namespaces "$NAMESPACES" '
-    ($namespaces | split(" ") | map(select(. != ""))) as $ns_filter |
+# Function to process flows from Loki
+process_flows() {
+  jq -r '
     .data.result[] | .stream as $labels | .values[] |
     ($labels.SrcK8S_Namespace // "") as $srcNs |
     ($labels.DstK8S_Namespace // "") as $dstNs |
-    ($labels.FlowDirection // "") as $flowDir |
     .[1] | fromjson |
-    select($flowDir == "0") |
+    # Only filter by destination port - everything else filtered by Loki
     select((.DstPort // 0) > 0 and (.DstPort // 0) < 32768) |
-    select(
-      if ($ns_filter | length) > 0 then
-        ($ns_filter | index($srcNs)) != null or ($ns_filter | index($dstNs)) != null
-      else
-        true
-      end
-    ) |
     [$srcNs,
      .SrcK8S_Name // "",
      .SrcAddr // "",
@@ -59,8 +47,36 @@ curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
      .DstK8S_Name // "",
      .DstAddr // "",
      (if .Proto == 6 then "TCP" elif .Proto == 17 then "UDP" else .Proto end),
-     .DstPort // ""] | @csv' | \
-  sort -u >> "$OUTPUT_FILE"
+     .DstPort // ""] | @csv'
+}
+
+# Append data - query Loki with pre-filters
+if [ $# -gt 0 ]; then
+  # Query for source namespace matches
+  curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+    --data-urlencode "query={app=\"netobserv-flowcollector\", FlowDirection=\"0\", SrcK8S_Namespace=~\"$NAMESPACE_REGEX\"}" \
+    --data-urlencode "start=$START_TIME" \
+    --data-urlencode "end=$END_TIME" \
+    --data-urlencode 'limit=5000' 2>/dev/null | process_flows >> "$OUTPUT_FILE.tmp"
+
+  # Query for destination namespace matches
+  curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+    --data-urlencode "query={app=\"netobserv-flowcollector\", FlowDirection=\"0\", DstK8S_Namespace=~\"$NAMESPACE_REGEX\"}" \
+    --data-urlencode "start=$START_TIME" \
+    --data-urlencode "end=$END_TIME" \
+    --data-urlencode 'limit=5000' 2>/dev/null | process_flows >> "$OUTPUT_FILE.tmp"
+else
+  # No namespace filter
+  curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+    --data-urlencode "query=$LOKI_QUERY" \
+    --data-urlencode "start=$START_TIME" \
+    --data-urlencode "end=$END_TIME" \
+    --data-urlencode 'limit=5000' 2>/dev/null | process_flows >> "$OUTPUT_FILE.tmp"
+fi
+
+# Sort and deduplicate
+sort -u "$OUTPUT_FILE.tmp" >> "$OUTPUT_FILE"
+rm -f "$OUTPUT_FILE.tmp"
 
 echo "Flows exported to: $OUTPUT_FILE"
 echo "Total flows: $(wc -l < "$OUTPUT_FILE" | xargs echo $(($(cat) - 1)))"
