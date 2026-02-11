@@ -62,6 +62,8 @@ func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string
 		// Extract custom field values
 		for _, fieldValue := range item.FieldValues.Nodes {
 			switch fieldValue.Field.Name {
+			case "Jira Feature":
+				pr.JiraFeature = fieldValue.Text
 			case "Jira Epic":
 				pr.JiraEpic = fieldValue.Text
 			case "Jira Issue":
@@ -190,11 +192,19 @@ func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, me
 		}
 
 		if _, found := fieldIDs[key]; !found {
-			if fieldID, err := ghGetFieldID(ctx, proj, key); err != nil {
-				return fmt.Errorf("failed to get ID for field '%s': %v", key, err)
-			} else {
-				fieldIDs[key] = fieldID
+			fieldID, err := ghGetFieldID(ctx, proj, key)
+			if err != nil {
+				// Skip fields that don't exist in the project
+				config.Printf("  Warning: field '%s' not found in project, skipping\n", key)
+				fieldIDs[key] = "" // Mark as checked but not found
+				continue
 			}
+			fieldIDs[key] = fieldID
+		}
+
+		// Skip if field was previously not found
+		if fieldIDs[key] == "" {
+			continue
 		}
 
 		err := ghItemEdit(ctx, proj.GitHubProjectID, itemID, "text", fieldIDs[key], value)

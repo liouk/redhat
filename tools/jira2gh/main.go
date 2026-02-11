@@ -1,6 +1,7 @@
 package main
 
 // this program has been partially written with Claude Code
+// TODO fetch OCPSTRAT->EPIC->ISSUE recursively
 
 import (
 	"bufio"
@@ -119,7 +120,7 @@ func run(ctx context.Context, cfg *config.NewConfig) error {
 }
 
 func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config.ProjectConfig) error {
-	config.Printf("Fetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("\n\nFetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
 	githubPRs, err := github.FetchGitHubPRs(ctx, proj)
 	if err != nil {
 		return err
@@ -215,7 +216,7 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 			prWord = "PR"
 		}
 		config.Printf("\n%d new %s to add to project:\n", len(newPRs), prWord)
-		displayGroupedPRs(groupPRsByRepo(newPRs))
+		displayGroupedPRs(groupPRsByRepo(newPRs), jiraCfg.Host)
 	}
 
 	// Display PRs to remove
@@ -225,7 +226,7 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 			prWord = "PR"
 		}
 		config.Printf("\n%d %s no longer linked to tracked epics:\n", len(removedPRs), prWord)
-		displayGroupedPRs(groupPRsByRepo(removedPRs))
+		displayGroupedPRs(groupPRsByRepo(removedPRs), jiraCfg.Host)
 	}
 
 	if config.Quiet {
@@ -299,7 +300,7 @@ func groupPRsByRepo(prs []jira.PR) map[string][]prInfo {
 	return prsByRepo
 }
 
-func displayGroupedPRs(prsByRepo map[string][]prInfo) {
+func displayGroupedPRs(prsByRepo map[string][]prInfo, jiraHost string) {
 	repos := make([]string, 0, len(prsByRepo))
 	for repo := range prsByRepo {
 		repos = append(repos, repo)
@@ -317,6 +318,9 @@ func displayGroupedPRs(prsByRepo map[string][]prInfo) {
 			config.Printf("    • #%s  %s\n", pr.number, pr.title)
 			config.Printf("      Author: %-20s State: %s\n", pr.author, pr.state)
 			config.Printf("      Jira:   %-20s Epic: %s\n", pr.issue, pr.epic)
+			if pr.issue != "" {
+				config.Printf("      Jira Link: %s/browse/%s\n", jiraHost, pr.issue)
+			}
 			config.Printf("      Link: %s\n", pr.url)
 		}
 	}
