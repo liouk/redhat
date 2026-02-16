@@ -212,7 +212,7 @@ kind: ConfigMap
 metadata:
   name: keycloak-${NAMESPACE}-ca
 data:
-  ca-bundle.crt: |
+  ca.crt: |
 $(echo "${CA_BUNDLE}" | sed 's/^/    /')
 EOF
   echo "CA ConfigMap created: keycloak-${NAMESPACE}-ca"

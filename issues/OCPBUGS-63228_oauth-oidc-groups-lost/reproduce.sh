@@ -6,7 +6,15 @@
 # 1. CONFIGURATION
 # ==========================================
 KC_BASE_URL="$1"
-[[ -z "$KC_BASE_URL" ]] && { echo "Error: KC_BASE_URL is required. Usage: $0 <KEYCLOAK_BASE_URL>"; exit 1; }
+SUFFIX="${2:-}"  # Optional suffix (default: empty)
+
+[[ -z "$KC_BASE_URL" ]] && {
+    echo "Error: KC_BASE_URL is required."
+    echo "Usage: $0 <KEYCLOAK_BASE_URL> [SUFFIX]"
+    echo "Example: $0 https://keycloak.example.com xyz"
+    echo "  (creates user1-xyz, user2-xyz, group1-xyz, group2-xyz, etc.)"
+    exit 1
+}
 
 KC_TARGET_REALM="master"
 KC_ADMIN_REALM="master"
@@ -18,6 +26,14 @@ NUM_USERS=20
 NUM_GROUPS=20
 COMMON_PASSWORD="redhatgss"
 OC_API_URL="$(oc whoami --show-server)"
+
+# Suffix for user/group names (added with dash if provided)
+if [[ -n "$SUFFIX" ]]; then
+    NAME_SUFFIX="-${SUFFIX}"
+    echo "Using suffix: $SUFFIX (user/group names will be like user1-${SUFFIX}, group1-${SUFFIX})"
+else
+    NAME_SUFFIX=""
+fi
 
 # Kubeconfig Isolation
 ADMIN_KUBECONFIG=${KUBECONFIG:-"$HOME/.kube/config"}
@@ -155,7 +171,7 @@ init_and_cache() {
 
     echo -e "${YELLOW}>> Ensuring $NUM_GROUPS Groups exist...${NC}"
     for ((i=1; i<=NUM_GROUPS; i++)); do
-        local gname="group${i}"
+        local gname="group${i}${NAME_SUFFIX}"
         # Create (silently fail if exists)
         curl -k -s -o /dev/null -X POST "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/groups" \
             -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d "{\"name\": \"$gname\"}"
@@ -188,7 +204,7 @@ except Exception as e:
 
     echo -e "${YELLOW}>> Ensuring $NUM_USERS Users exist...${NC}"
     for ((i=1; i<=NUM_USERS; i++)); do
-        local uname="user${i}"
+        local uname="user${i}${NAME_SUFFIX}"
         # Create
         curl -k -s -o /dev/null -X POST "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/users" \
             -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d "{\"username\": \"$uname\", \"enabled\": true}"
@@ -217,11 +233,45 @@ except Exception as e:
         USER_IDS[$i]=$uid
 
         # Set Password
-        curl -k -s -o /dev/null -X PUT "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/users/${uid}/reset-password" \
-            -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d "{\"type\": \"password\", \"value\": \"$COMMON_PASSWORD\", \"temporary\": false}"
-        echo -ne "   Cached $uname\r"
+        local pwd_response=$(curl -k -s -w "\n%{http_code}" -X PUT "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/users/${uid}/reset-password" \
+            -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d "{\"type\": \"password\", \"value\": \"$COMMON_PASSWORD\", \"temporary\": false}")
+        local pwd_http_code=$(echo "$pwd_response" | tail -n1)
+        if [[ "$pwd_http_code" != "204" && "$pwd_http_code" != "200" ]]; then
+            echo -e "\n${RED}Warning: Password set returned HTTP $pwd_http_code for $uname${NC}"
+            echo "Response: $(echo "$pwd_response" | head -n-1)"
+        fi
+        echo -ne "   Cached $uname (pwd: $pwd_http_code)\r"
     done
     echo -e "\n${GREEN}Initialization Complete.${NC}"
+
+    # --- Verify user can authenticate to Keycloak with 'openshift' client ---
+    local test_user="user1${NAME_SUFFIX}"
+    echo -e "${YELLOW}>> Testing Keycloak authentication for $test_user with 'openshift' client...${NC}"
+    local test_response=$(curl -k -s -w "\n%{http_code}" -X POST "${KC_BASE_URL}${KC_API_PREFIX}/realms/${KC_TARGET_REALM}/protocol/openid-connect/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "client_id=openshift" \
+        -d "username=$test_user" \
+        -d "password=${COMMON_PASSWORD}" \
+        -d "grant_type=password")
+    local test_http_code=$(echo "$test_response" | tail -n1)
+    local test_body=$(echo "$test_response" | head -n-1)
+
+    if [[ "$test_http_code" == "200" ]]; then
+        echo -e "${GREEN}   [OK] $test_user can authenticate to Keycloak with 'openshift' client${NC}"
+    else
+        echo -e "${RED}   [FAIL] $test_user cannot authenticate to Keycloak with 'openshift' client (HTTP $test_http_code)${NC}"
+        echo "$test_body" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print('   Error: ' + data.get('error', 'unknown'))
+    print('   Description: ' + data.get('error_description', 'none'))
+except:
+    pass
+" || echo "   Response: $test_body"
+        echo -e "${YELLOW}   HINT: Check if 'openshift' client has 'Direct Access Grants' enabled${NC}"
+        echo -e "${YELLOW}   Run: ./check-keycloak-client.sh ${KC_BASE_URL}${NC}"
+    fi
 }
 
 # ==========================================
@@ -236,8 +286,27 @@ perform_login_and_verify() {
     # --- A. User Login (Trigger Sync) ---
     export KUBECONFIG=$USER_KUBECONFIG
     rm -f $USER_KUBECONFIG
-    oc login "$OC_API_URL" -u "$user" -p "$COMMON_PASSWORD" --insecure-skip-tls-verify > /dev/null 2>&1
-    if [ $? -ne 0 ]; then echo -e "${RED}   [Error] Login failed for $user${NC}"; return 1; fi
+
+    echo -e "${YELLOW}   [DEBUG] Attempting login: user=$user, API=$OC_API_URL${NC}"
+    local login_output=$(oc login "$OC_API_URL" -u "$user" -p "$COMMON_PASSWORD" --insecure-skip-tls-verify -v=6 2>&1)
+    local login_status=$?
+
+    if [ $login_status -ne 0 ]; then
+        echo -e "${RED}   [Error] Login failed for $user (exit code: $login_status)${NC}"
+        echo -e "${RED}   [Error Output] $login_output${NC}"
+        return 1
+    fi
+
+    # Check if OAuth flow was used
+    if echo "$login_output" | grep -q "oauth"; then
+        echo -e "${GREEN}   [DEBUG] Login successful for $user (OAuth flow detected)${NC}"
+    else
+        echo -e "${YELLOW}   [DEBUG] Login successful for $user (but no OAuth in logs - checking...)${NC}"
+        echo "$login_output" | grep -i "auth\|token\|oidc" | head -5
+    fi
+
+    # Save kubeconfig for inspection
+    cp "$USER_KUBECONFIG" "/tmp/kubeconfig_${user}_last.yaml" 2>/dev/null
 
     # --- B. Verification Loop ---
     export KUBECONFIG=$ADMIN_KUBECONFIG
@@ -272,8 +341,19 @@ except:
 
     # Fail
     echo -e "${RED}   [FAIL] Timeout waiting for $user to be $expect in $group.${NC}"
-    # Optional: print actual group status
-    # oc get group "$group"
+    echo -e "${YELLOW}   Current group status:${NC}"
+    oc get group "$group" -o json 2>&1 | python3 -c "
+import sys, json
+try:
+    data = json.loads(sys.stdin.read())
+    users = data.get('users', [])
+    print(f'     Members: {users if users else \"(empty)\"}')
+except:
+    output = sys.stdin.read()
+    print(f'     Error: {output}')
+"
+    echo -e "${YELLOW}   Running detailed debug...${NC}"
+    ./debug-oidc-sync.sh "$KC_BASE_URL" "$user" "$group"
     exit 1
 }
 
@@ -292,9 +372,9 @@ run_chaos() {
         local u_idx=$((1 + RANDOM % NUM_USERS))
         local g_idx=$((1 + RANDOM % NUM_GROUPS))
 
-        local uname="user${u_idx}"
+        local uname="user${u_idx}${NAME_SUFFIX}"
         local uid=${USER_IDS[$u_idx]}
-        local gname="group${g_idx}"
+        local gname="group${g_idx}${NAME_SUFFIX}"
         local gid=${GROUP_IDS[$g_idx]}
 
         echo -e "${YELLOW}Iteration $count: Selected $uname & $gname${NC}"
