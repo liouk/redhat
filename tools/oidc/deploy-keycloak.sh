@@ -324,12 +324,12 @@ EOF
 
 # Function 3: Create Keycloak Client for OAuth
 create_keycloak_oauth_client() {
-  echo "Creating 'openshift' client in Keycloak..."
+  echo "Creating 'openshift' client in Keycloak..." >&2
 
   # Get OAuth server route to determine redirect URI
   OAUTH_ROUTE=$(oc get route oauth-openshift -n openshift-authentication -o jsonpath='{.status.ingress[0].host}' 2>/dev/null || true)
   if [ -z "${OAUTH_ROUTE}" ]; then
-    echo "Warning: Could not determine OAuth route. Using default pattern."
+    echo "Warning: Could not determine OAuth route. Using default pattern." >&2
     CLUSTER_DOMAIN=$(echo "${ROUTE_HOST}" | sed 's/^[^.]*\.//')
     OAUTH_ROUTE="oauth-openshift.${CLUSTER_DOMAIN}"
   fi
@@ -340,7 +340,7 @@ create_keycloak_oauth_client() {
   CLIENT_SECRET=$(openssl rand -base64 32)
 
   # Get admin access token
-  echo "Authenticating to Keycloak..."
+  echo "Authenticating to Keycloak..." >&2
   TOKEN_RESPONSE=$(curl -sk -X POST "https://${ROUTE_HOST}/realms/master/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "username=${KEYCLOAK_ADMIN}" \
@@ -351,13 +351,13 @@ create_keycloak_oauth_client() {
   ACCESS_TOKEN=$(echo "${TOKEN_RESPONSE}" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
 
   if [ -z "${ACCESS_TOKEN}" ]; then
-    echo "Error: Failed to get Keycloak admin token"
-    echo "Response: ${TOKEN_RESPONSE}"
+    echo "Error: Failed to get Keycloak admin token" >&2
+    echo "Response: ${TOKEN_RESPONSE}" >&2
     return 1
   fi
 
   # Create the client
-  echo "Creating client 'openshift' in Keycloak..."
+  echo "Creating client 'openshift' in Keycloak..." >&2
   CLIENT_DATA=$(cat <<EOF
 {
   "clientId": "openshift",
@@ -387,16 +387,16 @@ EOF
   # Check if client was created successfully
   if curl -sk -H "Authorization: Bearer ${ACCESS_TOKEN}" \
     "https://${ROUTE_HOST}/admin/realms/master/clients?clientId=openshift" | grep -q "openshift"; then
-    echo "Client 'openshift' created successfully"
-    echo "Client Secret: ${CLIENT_SECRET}"
-    echo "Redirect URI: ${REDIRECT_URI}"
-    echo ""
+    echo "Client 'openshift' created successfully" >&2
+    echo "Client Secret: ${CLIENT_SECRET}" >&2
+    echo "Redirect URI: ${REDIRECT_URI}" >&2
+    echo "" >&2
 
-    # Return the client secret for use in the manifest
+    # Return the client secret for use in the manifest (stdout only)
     echo "${CLIENT_SECRET}"
   else
-    echo "Error: Failed to create client"
-    echo "Response: ${CREATE_RESPONSE}"
+    echo "Error: Failed to create client" >&2
+    echo "Response: ${CREATE_RESPONSE}" >&2
     return 1
   fi
 }
