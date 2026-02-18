@@ -16,10 +16,23 @@ SUFFIX="${2:-}"  # Optional suffix (default: empty)
     exit 1
 }
 
+# Add https:// prefix if not present
+if [[ ! "$KC_BASE_URL" =~ ^https?:// ]]; then
+    KC_BASE_URL="https://${KC_BASE_URL}"
+fi
+
 KC_TARGET_REALM="master"
 KC_ADMIN_REALM="master"
 KC_USER="admin"
 KC_PASS="password"
+
+# Get client secret from cluster
+KC_CLIENT_SECRET="$(oc get secret -n openshift-config keycloak-oidc-secret -o jsonpath='{.data.clientSecret}' 2>/dev/null | base64 -d)"
+if [[ -z "$KC_CLIENT_SECRET" ]]; then
+    echo "Warning: Could not retrieve client secret from openshift-config/keycloak-oidc-secret"
+    echo "         The openshift client may be configured as public, or the secret does not exist."
+    KC_CLIENT_SECRET=""
+fi
 
 # Test Parameters
 NUM_USERS=20
@@ -247,12 +260,20 @@ except Exception as e:
     # --- Verify user can authenticate to Keycloak with 'openshift' client ---
     local test_user="user1${NAME_SUFFIX}"
     echo -e "${YELLOW}>> Testing Keycloak authentication for $test_user with 'openshift' client...${NC}"
-    local test_response=$(curl -k -s -w "\n%{http_code}" -X POST "${KC_BASE_URL}${KC_API_PREFIX}/realms/${KC_TARGET_REALM}/protocol/openid-connect/token" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "client_id=openshift" \
-        -d "username=$test_user" \
-        -d "password=${COMMON_PASSWORD}" \
-        -d "grant_type=password")
+
+    # Build curl command with client_secret if available (for confidential clients)
+    local auth_curl_cmd="curl -k -s -w \"\n%{http_code}\" -X POST \"${KC_BASE_URL}${KC_API_PREFIX}/realms/${KC_TARGET_REALM}/protocol/openid-connect/token\" \
+        -H \"Content-Type: application/x-www-form-urlencoded\" \
+        -d \"client_id=openshift\" \
+        -d \"username=$test_user\" \
+        -d \"password=${COMMON_PASSWORD}\" \
+        -d \"grant_type=password\""
+
+    if [[ -n "$KC_CLIENT_SECRET" ]]; then
+        auth_curl_cmd="${auth_curl_cmd} -d \"client_secret=${KC_CLIENT_SECRET}\""
+    fi
+
+    local test_response=$(eval "$auth_curl_cmd")
     local test_http_code=$(echo "$test_response" | tail -n1)
     local test_body=$(echo "$test_response" | head -n-1)
 
