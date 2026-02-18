@@ -308,7 +308,8 @@ perform_login_and_verify() {
     export KUBECONFIG=$USER_KUBECONFIG
     rm -f $USER_KUBECONFIG
 
-    echo -e "${YELLOW}   [DEBUG] Attempting login: user=$user, API=$OC_API_URL${NC}"
+    ts=$(date +"%H:%M:%S.%6N")
+    echo -e "${YELLOW}   [$ts][DEBUG] Attempting login: user=$user, API=$OC_API_URL${NC}"
     local login_output=$(oc login "$OC_API_URL" -u "$user" -p "$COMMON_PASSWORD" --insecure-skip-tls-verify -v=6 2>&1)
     local login_status=$?
 
@@ -403,9 +404,10 @@ run_chaos() {
         # 2. Check Keycloak State: Is the user ALREADY in the group?
         local is_member=$(_is_kc_member "$token" "$uid" "$gid")
 
+        ts=$(date +"%H:%M:%S.%6N")
         if [[ "$is_member" == "YES" ]]; then
             # --- CASE: ALREADY MEMBER -> REMOVE ---
-            echo -ne "   [State: Member] -> Action: REMOVING... "
+            echo -ne "   [$ts][State: Member] -> Action: REMOVING... "
             curl -k -s -o /dev/null -X DELETE \
                 "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/users/${uid}/groups/${gid}" \
                 -H "Authorization: Bearer ${token}"
@@ -415,7 +417,7 @@ run_chaos() {
 
         else
             # --- CASE: NOT MEMBER -> ADD ---
-            echo -ne "   [State: Stranger] -> Action: ADDING... "
+            echo -ne "   [$ts][State: Stranger] -> Action: ADDING... "
             curl -k -s -o /dev/null -X PUT \
                 "${KC_BASE_URL}${KC_API_PREFIX}/admin/realms/${KC_TARGET_REALM}/users/${uid}/groups/${gid}" \
                 -H "Authorization: Bearer ${token}"
