@@ -72,7 +72,16 @@ var rootCmd = &cobra.Command{
 		}
 
 		var err error
-		if cfgFile := cmd.Flag("config").Value.String(); len(cfgFile) > 0 {
+		cfgFile := cmd.Flag("config").Value.String()
+		if cfgFile == "" && len(args) == 0 {
+			// Try default config location
+			home, _ := os.UserHomeDir()
+			defaultCfg := home + "/.config/jira2gh/config.yaml"
+			if _, statErr := os.Stat(defaultCfg); statErr == nil {
+				cfgFile = defaultCfg
+			}
+		}
+		if cfgFile != "" {
 			projectFilter := cmd.Flag("project").Value.String()
 			err = cfg.CompleteFromFile(cfgFile, projectFilter)
 		} else {
