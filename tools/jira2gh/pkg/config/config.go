@@ -19,6 +19,7 @@ type NewConfig struct {
 
 type JiraConfig struct {
 	Host  string `yaml:"host"`
+	Email string `yaml:"email"`
 	Token string `yaml:"-"`
 }
 

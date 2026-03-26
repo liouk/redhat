@@ -2,6 +2,8 @@ package jira
 
 import (
 	"context"
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -154,39 +156,9 @@ func getFeatureChildItems(ctx context.Context, jira *config.JiraConfig, featureI
 	// This searches for items where the parent is the Feature
 	jql := fmt.Sprintf("parent = %s", featureID)
 
-	baseURL, err := url.JoinPath(jira.Host, "rest/api/2/search")
+	items, err := jiraSearchJQL(ctx, jira, jql)
 	if err != nil {
 		return nil, err
-	}
-
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	q := u.Query()
-	q.Set("jql", jql)
-	q.Set("fields", "key")
-	u.RawQuery = q.Encode()
-
-	respBody, err := jiraRequestURL(ctx, jira, u.String())
-	if err != nil {
-		return nil, err
-	}
-
-	var searchResult struct {
-		Issues []struct {
-			Key string `json:"key"`
-		} `json:"issues"`
-	}
-
-	if err := json.Unmarshal(respBody, &searchResult); err != nil {
-		return nil, fmt.Errorf("failed to parse search result: %w", err)
-	}
-
-	items := make([]string, len(searchResult.Issues))
-	for i, issue := range searchResult.Issues {
-		items[i] = issue.Key
 	}
 
 	return items, nil
@@ -196,39 +168,9 @@ func getEpicLinkedIssues(ctx context.Context, jira *config.JiraConfig, epicID st
 	// Use JQL to find all issues linked to this epic
 	jql := fmt.Sprintf("\"Epic Link\" = %s", epicID)
 
-	baseURL, err := url.JoinPath(jira.Host, "rest/api/2/search")
+	issues, err := jiraSearchJQL(ctx, jira, jql)
 	if err != nil {
 		return nil, err
-	}
-
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	q := u.Query()
-	q.Set("jql", jql)
-	q.Set("fields", "key")
-	u.RawQuery = q.Encode()
-
-	respBody, err := jiraRequestURL(ctx, jira, u.String())
-	if err != nil {
-		return nil, err
-	}
-
-	var searchResult struct {
-		Issues []struct {
-			Key string `json:"key"`
-		} `json:"issues"`
-	}
-
-	if err := json.Unmarshal(respBody, &searchResult); err != nil {
-		return nil, fmt.Errorf("failed to parse search result: %w", err)
-	}
-
-	issues := make([]string, len(searchResult.Issues))
-	for i, issue := range searchResult.Issues {
-		issues[i] = issue.Key
 	}
 
 	return issues, nil
@@ -285,6 +227,72 @@ func getIssueRemoteLinks(ctx context.Context, jira *config.JiraConfig, issueID s
 	return remoteLinks, nil
 }
 
+func jiraSearchJQL(ctx context.Context, jira *config.JiraConfig, jql string) ([]string, error) {
+	searchURL, err := url.JoinPath(jira.Host, "rest/api/2/search/jql")
+	if err != nil {
+		return nil, err
+	}
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"jql":    jql,
+		"fields": []string{"key"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal search request: %w", err)
+	}
+
+	respBody, err := jiraRequestPost(ctx, jira, searchURL, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var searchResult struct {
+		Issues []struct {
+			Key string `json:"key"`
+		} `json:"issues"`
+	}
+
+	if err := json.Unmarshal(respBody, &searchResult); err != nil {
+		return nil, fmt.Errorf("failed to parse search result: %w", err)
+	}
+
+	keys := make([]string, len(searchResult.Issues))
+	for i, issue := range searchResult.Issues {
+		keys[i] = issue.Key
+	}
+
+	return keys, nil
+}
+
+func jiraRequestPost(ctx context.Context, jira *config.JiraConfig, url string, body []byte) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(jira.Email+":"+jira.Token))))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return respBody, nil
+}
+
 func jiraRequest(ctx context.Context, jira *config.JiraConfig, path string) ([]byte, error) {
 	url, err := url.JoinPath(jira.Host, path)
 	if err != nil {
@@ -299,7 +307,7 @@ func jiraRequestURL(ctx context.Context, jira *config.JiraConfig, url string) ([
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jira.Token))
+	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(jira.Email+":"+jira.Token))))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
