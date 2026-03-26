@@ -84,6 +84,12 @@ var rootCmd = &cobra.Command{
 			os.Exit(StatusCodeError)
 		}
 
+		if author := cmd.Flag("author").Value.String(); author != "" {
+			for _, proj := range cfg.Projects {
+				proj.Author = author
+			}
+		}
+
 		if err := run(ctx, cfg); err != nil {
 			config.Stderr("Error: %v\n", err)
 			os.Exit(StatusCodeError)
@@ -99,6 +105,7 @@ func init() {
 	rootCmd.Flags().String("github-owner", "", "GitHub owner (user or org). If not provided, will be fetched from GitHub CLI")
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
+	rootCmd.Flags().String("author", "", "Only sync PRs authored by this GitHub user")
 	rootCmd.Flags().BoolP("quiet", "q", false, "Quiet mode: suppress all output, exit with 0=no new PRs, 1=new PRs found, 2=error")
 	rootCmd.Flags().BoolP("dry-run", "", false, "Dry-run mode: do not make any changes to the github project")
 }
@@ -145,6 +152,13 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 		config.Printf("  %-20s →  %d %s found (%d total)\n", id, prCount, prCountWord, totalCount)
 	}
 
+	// Filter out ignored PRs before fetching details
+	for url := range jiraPRs {
+		if shouldIgnorePR(url, proj) {
+			delete(jiraPRs, url)
+		}
+	}
+
 	// Enrich PRs with GitHub details (author, state)
 	config.Println("\nFetching PR details from GitHub...")
 	for url, pr := range jiraPRs {
@@ -166,6 +180,15 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 		pr.Author = author
 		pr.State = state
 		githubPRs[url] = pr
+	}
+
+	// Filter by author if specified
+	if proj.Author != "" {
+		for url, pr := range jiraPRs {
+			if pr.Author != proj.Author {
+				delete(jiraPRs, url)
+			}
+		}
 	}
 
 	prWord := "PRs"
