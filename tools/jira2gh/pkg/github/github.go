@@ -92,7 +92,7 @@ func AddToProject(ctx context.Context, proj *config.ProjectConfig, prs []jira.PR
 
 	for _, pr := range prs {
 		// Parse URL to get short format: owner/repo#number
-		shortPR := formatPRShort(pr.URL)
+		shortPR := FormatPRShort(pr.URL)
 		err := ghItemAdd(ctx, proj, pr.URL, pr.Metadata())
 		if err != nil {
 			return err
@@ -112,7 +112,7 @@ func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []ji
 	config.Printf("\nRemoving %s from project %s/%s...\n", prWord, proj.GitHubOwner, proj.GitHubProject)
 
 	for _, pr := range prs {
-		shortPR := formatPRShort(pr.URL)
+		shortPR := FormatPRShort(pr.URL)
 		if DryRun {
 			config.Printf("  ✓ %s (dry-run)\n", shortPR)
 			continue
@@ -134,7 +134,7 @@ func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []ji
 	return nil
 }
 
-func formatPRShort(url string) string {
+func FormatPRShort(url string) string {
 	// URL format: https://github.com/owner/repo/pull/number
 	parts := strings.Split(url, "/")
 	if len(parts) >= 7 && parts[2] == "github.com" && parts[5] == "pull" {
@@ -163,6 +163,145 @@ func FetchPRDetails(ctx context.Context, prURL string) (author, state string, er
 	}
 
 	return response.Author.Login, response.State, nil
+}
+
+// FetchJobSummary builds a short summary string for a PR based on its state,
+// required checks, and tide status.
+func FetchJobSummary(ctx context.Context, prURL string, prState string) (string, error) {
+	if prState == "MERGED" {
+		return "merged", nil
+	}
+	if prState == "CLOSED" {
+		return "closed", nil
+	}
+
+	owner, repo, number := parsePRParts(prURL)
+	if owner == "" {
+		return "", fmt.Errorf("could not parse PR URL: %s", prURL)
+	}
+	repoFull := owner + "/" + repo
+
+	// Fetch required checks
+	cmd := exec.CommandContext(ctx, "gh", "pr", "checks", number, "-R", repoFull, "--required")
+	output, _ := cmd.Output()
+
+	var passed, failed, running int
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line == "" {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		if len(fields) < 2 {
+			continue
+		}
+		switch fields[1] {
+		case "pass":
+			passed++
+		case "fail":
+			failed++
+		default:
+			running++
+		}
+	}
+
+	total := passed + failed + running
+
+	// Build checks part
+	var parts []string
+	if total > 0 {
+		if failed > 0 {
+			parts = append(parts, fmt.Sprintf("%d/%d failed", failed, total))
+		}
+		if running > 0 {
+			parts = append(parts, fmt.Sprintf("%d/%d running", running, total))
+		}
+		if failed == 0 && running == 0 {
+			parts = append(parts, fmt.Sprintf("%d/%d passed", passed, total))
+		}
+	}
+
+	// Fetch tide status
+	cmd = exec.CommandContext(ctx, "gh", "pr", "checks", number, "-R", repoFull)
+	output, _ = cmd.Output()
+
+	for _, line := range strings.Split(string(output), "\n") {
+		if !strings.HasPrefix(line, "tide\t") {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		desc := fields[len(fields)-1]
+
+		// Extract missing labels
+		if idx := strings.Index(desc, "Needs "); idx != -1 {
+			labelsStr := desc[idx+len("Needs "):]
+			labelsStr = strings.TrimSuffix(labelsStr, ".")
+			labelsStr = strings.ReplaceAll(labelsStr, " labels", "")
+			labelsStr = strings.ReplaceAll(labelsStr, " label", "")
+			labelsStr = strings.ReplaceAll(labelsStr, ", ", ",")
+			labels := strings.Split(labelsStr, ",")
+			var shortLabels []string
+			for _, l := range labels {
+				l = strings.TrimSpace(l)
+				if l != "" {
+					shortLabels = append(shortLabels, l)
+				}
+			}
+			if len(shortLabels) > 0 {
+				parts = append(parts, "needs: "+strings.Join(shortLabels, ", "))
+			}
+		}
+
+		// Check for hold
+		if strings.Contains(desc, "do-not-merge/hold") {
+			parts = append(parts, "hold")
+		}
+
+		// Check for merge pool
+		if strings.Contains(desc, "In merge pool") {
+			parts = append(parts, "merging")
+		}
+
+		break
+	}
+
+	return strings.Join(parts, ", "), nil
+}
+
+func parsePRParts(url string) (owner, repo, number string) {
+	parts := strings.Split(url, "/")
+	if len(parts) >= 7 && parts[2] == "github.com" && parts[5] == "pull" {
+		return parts[3], parts[4], parts[6]
+	}
+	return "", "", ""
+}
+
+// UpdateJobSummary updates the "Job Summary" field for a PR already in the project.
+func UpdateJobSummary(ctx context.Context, proj *config.ProjectConfig, itemID string, summary string) error {
+	if DryRun {
+		return nil
+	}
+
+	if proj.GitHubProjectID == "" {
+		projID, err := ghGetProjectID(ctx, proj)
+		if err != nil {
+			return err
+		}
+		proj.GitHubProjectID = projID
+	}
+
+	if _, found := fieldIDs["Job Summary"]; !found {
+		fieldID, err := ghGetFieldID(ctx, proj, "Job Summary")
+		if err != nil {
+			return err
+		}
+		fieldIDs["Job Summary"] = fieldID
+	}
+
+	if fieldIDs["Job Summary"] == "" {
+		return nil
+	}
+
+	return ghItemEdit(ctx, proj.GitHubProjectID, itemID, "text", fieldIDs["Job Summary"], summary)
 }
 
 func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, metadata map[string]string) error {

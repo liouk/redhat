@@ -35,6 +35,7 @@ type ProjectConfig struct {
 	IgnoreRepos     []string `yaml:"ignore_repos"`
 	IgnorePRs       []string `yaml:"ignore_prs"`
 	Author          string   `yaml:"-"`
+	SkipJira        bool     `yaml:"-"`
 }
 
 type GitHubFieldValue struct {

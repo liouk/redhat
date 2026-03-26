@@ -21,6 +21,7 @@ type PR struct {
 	JiraFeature string
 	JiraEpic    string
 	JiraIssue   string
+	JobSummary  string
 	ItemID      string
 }
 
@@ -34,6 +35,9 @@ func (pr *PR) Metadata() map[string]string {
 	}
 	if pr.JiraIssue != "" {
 		metadata["Jira Issue"] = pr.JiraIssue
+	}
+	if pr.JobSummary != "" {
+		metadata["Job Summary"] = pr.JobSummary
 	}
 	return metadata
 }
