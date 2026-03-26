@@ -93,6 +93,14 @@ var rootCmd = &cobra.Command{
 			os.Exit(StatusCodeError)
 		}
 
+		if authorsStr := cmd.Flag("authors").Value.String(); authorsStr != "" {
+			for _, proj := range cfg.Projects {
+				for author := range strings.SplitSeq(authorsStr, ",") {
+					proj.Authors = append(proj.Authors, strings.TrimSpace(author))
+				}
+			}
+		}
+
 		skipJira, _ := cmd.Flags().GetBool("skip-jira")
 		if skipJira {
 			for _, proj := range cfg.Projects {
@@ -115,6 +123,7 @@ func init() {
 	rootCmd.Flags().String("github-owner", "", "GitHub owner (user or org). If not provided, will be fetched from GitHub CLI")
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
+	rootCmd.Flags().String("authors", "", "Only sync PRs authored by these GitHub users (comma-separated)")
 	rootCmd.Flags().Bool("skip-jira", false, "Skip Jira sync, only update job summaries for PRs already in the project")
 	rootCmd.Flags().BoolP("quiet", "q", false, "Quiet mode: suppress all output, exit with 0=no new PRs, 1=new PRs found, 2=error")
 	rootCmd.Flags().BoolP("dry-run", "", false, "Dry-run mode: do not make any changes to the github project")
@@ -228,6 +237,15 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 		pr.Author = author
 		pr.State = state
 		githubPRs[url] = pr
+	}
+
+	// Filter by authors if specified
+	if len(proj.Authors) > 0 {
+		for url, pr := range jiraPRs {
+			if !slices.Contains(proj.Authors, pr.Author) {
+				delete(jiraPRs, url)
+			}
+		}
 	}
 
 	prWord := "PRs"
