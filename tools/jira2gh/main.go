@@ -134,7 +134,10 @@ func main() {
 }
 
 func run(ctx context.Context, cfg *config.NewConfig) error {
-	for _, proj := range cfg.Projects {
+	for i, proj := range cfg.Projects {
+		if i > 0 {
+			config.Println("")
+		}
 		if err := runForProject(ctx, cfg.Jira, proj); err != nil {
 			return err
 		}
@@ -144,7 +147,7 @@ func run(ctx context.Context, cfg *config.NewConfig) error {
 }
 
 func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config.ProjectConfig) error {
-	config.Printf("\n\nFetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("Fetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
 	githubPRs, err := github.FetchGitHubPRs(ctx, proj)
 	if err != nil {
 		return err
