@@ -275,9 +275,9 @@ func parsePRParts(url string) (owner, repo, number string) {
 	return "", "", ""
 }
 
-// UpdateJobSummary updates the "Job Summary" field for a PR already in the project.
-func UpdateJobSummary(ctx context.Context, proj *config.ProjectConfig, itemID string, summary string) error {
-	if DryRun {
+// UpdateItemField updates a text field for an item already in the project.
+func UpdateItemField(ctx context.Context, proj *config.ProjectConfig, itemID string, fieldName string, value string) error {
+	if DryRun || value == "" {
 		return nil
 	}
 
@@ -289,19 +289,19 @@ func UpdateJobSummary(ctx context.Context, proj *config.ProjectConfig, itemID st
 		proj.GitHubProjectID = projID
 	}
 
-	if _, found := fieldIDs["Job Summary"]; !found {
-		fieldID, err := ghGetFieldID(ctx, proj, "Job Summary")
+	if _, found := fieldIDs[fieldName]; !found {
+		fieldID, err := ghGetFieldID(ctx, proj, fieldName)
 		if err != nil {
 			return err
 		}
-		fieldIDs["Job Summary"] = fieldID
+		fieldIDs[fieldName] = fieldID
 	}
 
-	if fieldIDs["Job Summary"] == "" {
+	if fieldIDs[fieldName] == "" {
 		return nil
 	}
 
-	return ghItemEdit(ctx, proj.GitHubProjectID, itemID, "text", fieldIDs["Job Summary"], summary)
+	return ghItemEdit(ctx, proj.GitHubProjectID, itemID, "text", fieldIDs[fieldName], value)
 }
 
 func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, metadata map[string]string) error {

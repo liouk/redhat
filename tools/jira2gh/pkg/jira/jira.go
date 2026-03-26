@@ -36,6 +36,9 @@ func (pr *PR) Metadata() map[string]string {
 	if pr.JiraIssue != "" {
 		metadata["Jira Issue"] = pr.JiraIssue
 	}
+	if pr.Author != "" {
+		metadata["PR Author"] = pr.Author
+	}
 	if pr.JobSummary != "" {
 		metadata["Job Summary"] = pr.JobSummary
 	}

@@ -93,12 +93,6 @@ var rootCmd = &cobra.Command{
 			os.Exit(StatusCodeError)
 		}
 
-		if author := cmd.Flag("author").Value.String(); author != "" {
-			for _, proj := range cfg.Projects {
-				proj.Author = author
-			}
-		}
-
 		skipJira, _ := cmd.Flags().GetBool("skip-jira")
 		if skipJira {
 			for _, proj := range cfg.Projects {
@@ -122,7 +116,6 @@ func init() {
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
 	rootCmd.Flags().Bool("skip-jira", false, "Skip Jira sync, only update job summaries for PRs already in the project")
-	rootCmd.Flags().String("author", "", "Only sync PRs authored by this GitHub user")
 	rootCmd.Flags().BoolP("quiet", "q", false, "Quiet mode: suppress all output, exit with 0=no new PRs, 1=new PRs found, 2=error")
 	rootCmd.Flags().BoolP("dry-run", "", false, "Dry-run mode: do not make any changes to the github project")
 }
@@ -155,19 +148,20 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 	config.Printf("✓ Found %d PRs in project\n", len(githubPRs))
 
 	if proj.SkipJira {
-		// Only update job summaries, skip Jira sync
+		// Only update project fields, skip Jira sync
 		config.Println("\nFetching PR details from GitHub...")
 		for url, pr := range githubPRs {
-			_, state, err := github.FetchPRDetails(ctx, url)
+			author, state, err := github.FetchPRDetails(ctx, url)
 			if err != nil {
 				config.Printf("  Warning: could not fetch details for %s: %v\n", url, err)
 				continue
 			}
+			pr.Author = author
 			pr.State = state
 			githubPRs[url] = pr
 		}
 
-		config.Println("\nUpdating job summaries...")
+		config.Println("\nUpdating project fields...")
 		for url, pr := range githubPRs {
 			if pr.ItemID == "" {
 				continue
@@ -177,9 +171,11 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 				config.Printf("  Warning: could not fetch job summary for %s: %v\n", github.FormatPRShort(url), err)
 				continue
 			}
-			if err := github.UpdateJobSummary(ctx, proj, pr.ItemID, summary); err != nil {
+			if err := github.UpdateItemField(ctx, proj, pr.ItemID, "Job Summary", summary); err != nil {
 				config.Printf("  Warning: could not update job summary for %s: %v\n", github.FormatPRShort(url), err)
-				continue
+			}
+			if err := github.UpdateItemField(ctx, proj, pr.ItemID, "PR Author", pr.Author); err != nil {
+				config.Printf("  Warning: could not update PR author for %s: %v\n", github.FormatPRShort(url), err)
 			}
 			config.Printf("  ✓ %s: %s\n", github.FormatPRShort(url), summary)
 		}
@@ -234,15 +230,6 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 		githubPRs[url] = pr
 	}
 
-	// Filter by author if specified
-	if proj.Author != "" {
-		for url, pr := range jiraPRs {
-			if pr.Author != proj.Author {
-				delete(jiraPRs, url)
-			}
-		}
-	}
-
 	prWord := "PRs"
 	if len(jiraPRs) == 1 {
 		prWord = "PR"
@@ -283,8 +270,8 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 		}
 	}
 
-	// Update Job Summary for all PRs in the project
-	config.Println("\nUpdating job summaries...")
+	// Update project fields for all PRs in the project
+	config.Println("\nUpdating project fields...")
 	for url, pr := range githubPRs {
 		if pr.ItemID == "" {
 			continue
@@ -294,9 +281,11 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 			config.Printf("  Warning: could not fetch job summary for %s: %v\n", github.FormatPRShort(url), err)
 			continue
 		}
-		if err := github.UpdateJobSummary(ctx, proj, pr.ItemID, summary); err != nil {
+		if err := github.UpdateItemField(ctx, proj, pr.ItemID, "Job Summary", summary); err != nil {
 			config.Printf("  Warning: could not update job summary for %s: %v\n", github.FormatPRShort(url), err)
-			continue
+		}
+		if err := github.UpdateItemField(ctx, proj, pr.ItemID, "PR Author", pr.Author); err != nil {
+			config.Printf("  Warning: could not update PR author for %s: %v\n", github.FormatPRShort(url), err)
 		}
 		config.Printf("  ✓ %s: %s\n", github.FormatPRShort(url), summary)
 	}
