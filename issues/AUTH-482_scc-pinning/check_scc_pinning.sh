@@ -303,7 +303,7 @@ cat > "$HTML_OUTPUT" << 'HTMLHEAD'
 HTMLHEAD
 
 echo "<h1>SCC Pinning Status Report</h1>" >> "$HTML_OUTPUT"
-echo "<p class=\"timestamp\">Generated: $(date '+%Y-%m-%d %H:%M:%S')</p>" >> "$HTML_OUTPUT"
+echo "<p class=\"timestamp\">Generated: $(date '+%Y-%m-%d %H:%M:%S') · <a href=\"https://github.com/liouk/redhat/blob/main/issues/AUTH-482_scc-pinning/check_scc_pinning.sh\" target=\"_blank\" style=\"background:#24292e;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.85em;text-decoration:none\">View source on GitHub</a></p>" >> "$HTML_OUTPUT"
 
 # summary cards
 echo '<div class="summary">' >> "$HTML_OUTPUT"
