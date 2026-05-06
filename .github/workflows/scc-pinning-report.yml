@@ -1,0 +1,41 @@
+name: SCC Pinning Report
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate report
+        run: |
+          bash issues/AUTH-482_scc-pinning/check_scc_pinning.sh 5.0 4.22 4.21 4.20 4.19 --html
+
+      - name: Prepare pages artifact
+        run: |
+          mkdir -p _site/scc-pinning
+          mv scc_pinning_report.html _site/scc-pinning/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
