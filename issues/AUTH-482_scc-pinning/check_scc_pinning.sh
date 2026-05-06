@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ORIGIN_MONITORTEST="${ORIGIN_MONITORTEST:-$HOME/redhat/repos/openshift/origin/pkg/monitortests/authentication/requiredsccmonitortests/monitortest.go}"
+ORIGIN_MONITORTEST_PATH="pkg/monitortests/authentication/requiredsccmonitortests/monitortest.go"
 HTML_OUTPUT="scc_pinning_report.html"
 
 # parse args
@@ -23,17 +23,23 @@ if [[ ${#VERSIONS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-# extract non-runlevel namespaces from namespacesWithPendingSCCPinning in origin
-PENDING_NS=$(sed -n '/namespacesWithPendingSCCPinning/,/^)/p' "$ORIGIN_MONITORTEST" \
-  | grep '"openshift-' \
-  | sed 's/.*"\(.*\)".*/\1/' \
-  | sort)
+# fetch namespacesWithPendingSCCPinning from origin for a given version
+fetch_pending_ns() {
+  local version="$1"
+  local branch="release-${version}"
+  local url="https://raw.githubusercontent.com/openshift/origin/${branch}/${ORIGIN_MONITORTEST_PATH}"
+  local content
+  content=$(curl -sf "$url" 2>/dev/null) || return 1
+  echo "$content" \
+    | sed -n '/namespacesWithPendingSCCPinning/,/^)/p' \
+    | grep '"openshift-' \
+    | sed 's/.*"\(.*\)".*/\1/' \
+    | sort
+}
 
 FILTER='{"items":[{"columnField":"name","operatorValue":"contains","value":"all workloads in ns/"},{"columnField":"name","operatorValue":"ends with","value":"must set the '\''openshift.io/required-scc'\'' annotation"}],"linkOperator":"and"}'
 
 ENCODED_FILTER=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$FILTER'''))")
-
-PENDING_JSON=$(echo "$PENDING_NS" | jq -R . | jq -s .)
 
 JQSCRIPT=$(mktemp)
 trap 'rm -f "$JQSCRIPT"' EXIT
@@ -79,14 +85,13 @@ map(select(.ns as $n | $runlevel | index($n) | not)) |
 
 # classify each namespace
 map(. + {
-  in_pending: (.ns as $n | $pending | index($n) | . != null),
-  flaking: (.flakes > 0 or .fail > 0)
+  in_pending: (.ns as $n | $pending | index($n) | . != null)
 }) |
 
-# still flaking — needs fix
-(map(select(.flaking and .in_pending))     | sort_by(.ns)) as $known |
-# flaking but NOT in pending list — new regression or missing entry
-(map(select(.flaking and (.in_pending | not))) | sort_by(.ns)) as $new |
+# pending namespaces: flakes > 0 means still needs fix
+(map(select(.in_pending and .flakes > 0))     | sort_by(.ns)) as $known |
+# non-pending namespaces: flakes > 0 OR fail > 0 (fail may be aggregator noise, filtered later)
+(map(select((.in_pending | not) and (.flakes > 0 or .fail > 0))) | sort_by(.ns)) as $new |
 # in pending list but no longer flaking — fix landed, can remove from list
 ($pending | map(select(. as $n |
   ($runlevel | index($n) | . == null) and
@@ -113,11 +118,47 @@ def sippy_link:
 }
 EOF
 
+# fetch test failure outputs for a given version and test name, extract unique workloads
+fetch_workloads() {
+  local version="$1"
+  local test_name="$2"
+  local encoded_test
+  encoded_test=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$test_name")
+
+  curl -s "https://sippy.dptools.openshift.org/api/tests/outputs?release=${version}&test=${encoded_test}" \
+    | jq '[.[]? | .output | split("\n")[] | select(length > 0) |
+        capture("annotation missing from pod '\''(?<pod>[^'\'']+)'\''( \\(owners: (?<owners>[^)]+)\\))?; (?<detail>.+)") |
+        {owners: (.owners // .pod), detail} |
+        .owners |= (split(", ") | map(
+          # strip trailing k8s-generated suffixes (hashes, numbers, random strings)
+          # replicaset/foo-7bf8c4d -> replicaset/foo
+          # job/image-pruner-29633760 -> job/image-pruner
+          # job/periodic-gathering-4jpxk -> job/periodic-gathering
+          # catalogsource/oo-5bh82 -> catalogsource/oo
+          # keep stripping until no more trailing random segments
+          # long hex hashes (OLM bundle jobs): job/0bc98bfa3732... -> job/(bundle-install)
+          if test("/[0-9a-f]{40,}$") then sub("/[0-9a-f]{40,}$"; "/(bundle-install)") else . end |
+          sub("-[0-9a-f]{6,}$"; "") |
+          sub("-[0-9]+$"; "") |
+          sub("-[0-9a-z]{4,5}$"; "")
+        ) | join(", "))
+      ] | unique_by(.owners + .detail) | sort_by(.owners)'
+}
+
 # collect data for all versions
 echo "Fetching Sippy data..." >&2
 ALL_DATA="[]"
 for v in "${VERSIONS[@]}"; do
   echo "  querying v${v}..." >&2
+
+  # fetch pending namespaces for this version from GitHub
+  PENDING_NS=$(fetch_pending_ns "$v" 2>/dev/null) || true
+  if [[ -z "$PENDING_NS" ]]; then
+    echo "    warning: could not fetch pending list from origin release-${v} branch" >&2
+    PENDING_JSON="[]"
+  else
+    PENDING_JSON=$(echo "$PENDING_NS" | jq -R . | jq -s .)
+  fi
 
   # check if version exists in Sippy
   VERSION_EXISTS=$(curl -s "https://sippy.dptools.openshift.org/api/tests?release=${v}&limit=1" | jq 'length')
@@ -173,6 +214,35 @@ if [[ "$HTML_MODE" == false ]]; then
   exit 0
 fi
 
+# HTML mode: fetch workload details for all flaking namespaces
+echo "Fetching workload details..." >&2
+FLAKING_NS=$(echo "$ALL_DATA" | jq -r '[.[] | select(.no_data | not) | {version, items: (.known + .new)} | .version as $v | .items[] | {key: "\($v)|\(.test_name)", version: $v, test_name}] | unique_by(.key) | .[]| @base64')
+
+declare -A WORKLOAD_CACHE
+for entry in $FLAKING_NS; do
+  decoded=$(echo "$entry" | base64 -d)
+  v=$(echo "$decoded" | jq -r '.version')
+  test_name=$(echo "$decoded" | jq -r '.test_name')
+  ns=$(echo "$test_name" | sed 's/.*all workloads in ns\///' | sed 's/ must set the.*//')
+  echo "  fetching workloads for ${v}/${ns}..." >&2
+  workloads=$(fetch_workloads "$v" "$test_name")
+  WORKLOAD_CACHE["${v}|${ns}"]="$workloads"
+done
+
+# build a JSON object with all workload data
+WORKLOAD_JSON="{}"
+for key in "${!WORKLOAD_CACHE[@]}"; do
+  WORKLOAD_JSON=$(echo "$WORKLOAD_JSON" | jq --arg key "$key" --argjson val "${WORKLOAD_CACHE[$key]}" '.[$key] = $val')
+done
+
+# filter out "new" entries with 0 workloads (aggregator/infra noise, not real SCC failures)
+ALL_DATA=$(echo "$ALL_DATA" | jq --argjson wk "$WORKLOAD_JSON" '
+  [.[] | . as $ver |
+    .new |= [.[] | select(($wk["\($ver.version)|\(.ns)"] // []) | length > 0)] |
+    .summary.new = (.new | length)
+  ]
+')
+
 # HTML output
 echo "Generating HTML report..." >&2
 
@@ -216,6 +286,16 @@ cat > "$HTML_OUTPUT" << 'HTMLHEAD'
   a { color: #2980b9; text-decoration: none; }
   a:hover { text-decoration: underline; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .expandable { cursor: pointer; user-select: none; }
+  .expandable:hover { background: rgba(0,0,0,0.03); }
+  .expand-icon { display: inline-block; width: 16px; font-size: 0.75em; color: #888; transition: transform 0.15s; }
+  .details-row { display: none; }
+  .details-row.open { display: table-row; }
+  .details-row td { padding: 8px 10px 12px 32px; background: #f9f9f9; }
+  .workload-list { list-style: none; font-size: 0.85em; }
+  .workload-list li { padding: 3px 0; font-family: monospace; }
+  .workload-list .scc-suggestion { color: #27ae60; font-weight: 500; }
+  .workload-count { background: #eee; color: #555; font-size: 0.75em; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -239,61 +319,82 @@ echo "$ALL_DATA" | jq -r '.[] |
 ' >> "$HTML_OUTPUT"
 echo '</div>' >> "$HTML_OUTPUT"
 
+# render a table with expandable rows; args: jq array, row class, workloads json
+render_table() {
+  local items_json="$1"
+  local row_class="$2"
+  local workloads_json="$3"
+  local version="$4"
+
+  echo "$items_json" | jq -r --arg row_class "$row_class" --arg version "$version" --argjson wk "$workloads_json" '
+    if length == 0 then
+      "<p class=\"none-msg\">None</p>"
+    else
+      "<table><tr><th class=\"num\">Workloads</th><th>Namespace</th><th class=\"num\">Runs</th><th class=\"num\">Pass</th><th class=\"num\">Flakes</th><th class=\"num\">Fail</th><th>Sippy</th></tr>" +
+      ([to_entries[] | .value as $item | .key as $idx |
+        ($wk["\($version)|\($item.ns)"] // []) as $workloads |
+        "<tr class=\"\($row_class) expandable\" onclick=\"document.getElementById('\''\($version)-\($row_class)-\($idx)'\'').classList.toggle('\''open'\'')\"><td class=\"num\">\($workloads | length)</td><td><span class=\"expand-icon\">&#9654;</span> \($item.ns)</td><td class=\"num\">\($item.runs)</td><td class=\"num\">\($item.pass)</td><td class=\"num\">\($item.flakes)</td><td class=\"num\">\($item.fail)</td><td><a href=\"\($item.sippy)\" target=\"_blank\" onclick=\"event.stopPropagation()\">view</a></td></tr>" +
+        "<tr class=\"details-row\" id=\"\($version)-\($row_class)-\($idx)\"><td colspan=\"7\">" +
+        (if ($workloads | length) > 0 then
+          "<ul class=\"workload-list\">" +
+          ([$workloads[] |
+            "<li>\(.owners) &rarr; <span class=\"scc-suggestion\">\(.detail)</span></li>"
+          ] | join("")) +
+          "</ul>"
+        else
+          "<p class=\"none-msg\">No failure details available</p>"
+        end) +
+        "</td></tr>"
+      ] | join("")) +
+      "</table>"
+    end
+  '
+}
+
 # per-version sections
-echo "$ALL_DATA" | jq -r '.[] |
-  if .no_data then
-    "<div class=\"version-section\">" +
-    "<div class=\"version-header\" style=\"background:#95a5a6\"><span>\(.version)</span><span class=\"badges\"><span style=\"background:#7f8c8d\">no data</span></span></div>" +
-    "<div class=\"section-group\"><p class=\"none-msg\" style=\"color:#e74c3c;font-style:normal\">&#9888; No test data found for this version. It may not exist in Sippy yet.</p></div>" +
-    "</div>"
-  else
-  "<div class=\"version-section\">" +
-  "<div class=\"version-header\"><span>\(.version)</span><span class=\"badges\">" +
-  (if .summary.known > 0 then "<span class=\"badge-flaking\">\(.summary.known) flaking</span>" else "" end) +
-  (if .summary.new > 0 then "<span class=\"badge-new\">\(.summary.new) new</span>" else "" end) +
-  (if .summary.fixed > 0 then "<span class=\"badge-fixed\">\(.summary.fixed) fixed</span>" else "" end) +
-  "</span></div>" +
+for v_idx in $(seq 0 $((${#VERSIONS[@]} - 1))); do
+  VDATA=$(echo "$ALL_DATA" | jq ".[$v_idx]")
+  VERSION=$(echo "$VDATA" | jq -r '.version')
+  NO_DATA=$(echo "$VDATA" | jq -r '.no_data')
 
-  # known flaking
-  "<div class=\"section-group\"><h3>Still flaking (in pending list)</h3>" +
-  (if (.known | length) > 0 then
-    "<table><tr><th>Namespace</th><th class=\"num\">Runs</th><th class=\"num\">Pass</th><th class=\"num\">Flakes</th><th class=\"num\">Fail</th><th>Sippy</th></tr>" +
-    ([.known[] |
-      "<tr class=\"row-flaking\"><td>\(.ns)</td><td class=\"num\">\(.runs)</td><td class=\"num\">\(.pass)</td><td class=\"num\">\(.flakes)</td><td class=\"num\">\(.fail)</td><td><a href=\"\(.sippy)\" target=\"_blank\">view</a></td></tr>"
-    ] | join("")) +
-    "</table>"
-  else
-    "<p class=\"none-msg\">None</p>"
-  end) +
-  "</div>" +
+  if [[ "$NO_DATA" == "true" ]]; then
+    cat >> "$HTML_OUTPUT" << NODATA
+<div class="version-section">
+<div class="version-header" style="background:#95a5a6"><span>${VERSION}</span><span class="badges"><span style="background:#7f8c8d">no data</span></span></div>
+<div class="section-group"><p class="none-msg" style="color:#e74c3c;font-style:normal">&#9888; No test data found for this version. It may not exist in Sippy yet.</p></div>
+</div>
+NODATA
+    continue
+  fi
 
-  # new
-  "<div class=\"section-group\"><h3>New: flaking but NOT in pending list</h3>" +
-  (if (.new | length) > 0 then
-    "<table><tr><th>Namespace</th><th class=\"num\">Runs</th><th class=\"num\">Pass</th><th class=\"num\">Flakes</th><th class=\"num\">Fail</th><th>Sippy</th></tr>" +
-    ([.new[] |
-      "<tr class=\"row-new\"><td>\(.ns)</td><td class=\"num\">\(.runs)</td><td class=\"num\">\(.pass)</td><td class=\"num\">\(.flakes)</td><td class=\"num\">\(.fail)</td><td><a href=\"\(.sippy)\" target=\"_blank\">view</a></td></tr>"
-    ] | join("")) +
-    "</table>"
-  else
-    "<p class=\"none-msg\">None</p>"
-  end) +
-  "</div>" +
+  KNOWN_JSON=$(echo "$VDATA" | jq '.known')
+  NEW_JSON=$(echo "$VDATA" | jq '.new')
+  FIXED_HTML=$(echo "$VDATA" | jq -r '
+    if (.fixed | length) > 0 then
+      "<ul class=\"fixed-list\">" + ([.fixed[] | "<li>\(.)</li>"] | join("")) + "</ul>"
+    else
+      "<p class=\"none-msg\">None</p>"
+    end
+  ')
 
-  # fixed
-  "<div class=\"section-group\"><h3>Fixed: can be removed from pending list</h3>" +
-  (if (.fixed | length) > 0 then
-    "<ul class=\"fixed-list\">" +
-    ([.fixed[] | "<li>\(.)</li>"] | join("")) +
-    "</ul>"
-  else
-    "<p class=\"none-msg\">None</p>"
-  end) +
-  "</div>" +
+  BADGES=$(echo "$VDATA" | jq -r '
+    (if .summary.known > 0 then "<span class=\"badge-flaking\">\(.summary.known) flaking</span>" else "" end) +
+    (if .summary.new > 0 then "<span class=\"badge-new\">\(.summary.new) new</span>" else "" end) +
+    (if .summary.fixed > 0 then "<span class=\"badge-fixed\">\(.summary.fixed) fixed</span>" else "" end)
+  ')
 
-  "</div>"
-  end
-' >> "$HTML_OUTPUT"
+  KNOWN_TABLE=$(render_table "$KNOWN_JSON" "row-flaking" "$WORKLOAD_JSON" "$VERSION")
+  NEW_TABLE=$(render_table "$NEW_JSON" "row-new" "$WORKLOAD_JSON" "$VERSION")
+
+  cat >> "$HTML_OUTPUT" << VERSIONSECTION
+<div class="version-section">
+<div class="version-header"><span>${VERSION}</span><span class="badges">${BADGES}</span></div>
+<div class="section-group"><h3>Still flaking (in pending list)</h3>${KNOWN_TABLE}</div>
+<div class="section-group"><h3>New: flaking but NOT in pending list</h3>${NEW_TABLE}</div>
+<div class="section-group"><h3>Fixed: can be removed from pending list</h3>${FIXED_HTML}</div>
+</div>
+VERSIONSECTION
+done
 
 echo "</body></html>" >> "$HTML_OUTPUT"
 
