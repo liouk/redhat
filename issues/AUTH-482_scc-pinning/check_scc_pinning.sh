@@ -258,7 +258,8 @@ cat > "$HTML_OUTPUT" << 'HTMLHEAD'
   h1 { font-size: 1.6em; margin-bottom: 4px; }
   .timestamp { color: #666; font-size: 0.85em; margin-bottom: 24px; }
   .summary { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
-  .summary-card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 160px; }
+  .summary-card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 160px; cursor: pointer; transition: box-shadow 0.15s; text-decoration: none; color: inherit; }
+  .summary-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
   .summary-card h3 { font-size: 0.85em; color: #666; margin-bottom: 8px; }
   .summary-card .counts { display: flex; gap: 12px; font-size: 0.9em; }
   .summary-card .counts span { display: flex; align-items: center; gap: 4px; }
@@ -308,13 +309,13 @@ echo "<p class=\"timestamp\">Generated: $(date '+%Y-%m-%d %H:%M:%S')</p>" >> "$H
 echo '<div class="summary">' >> "$HTML_OUTPUT"
 echo "$ALL_DATA" | jq -r '.[] |
   if .no_data then
-    "<div class=\"summary-card\" style=\"opacity:0.5\"><h3>\(.version)</h3><div class=\"counts\"><span>no data</span></div></div>"
+    "<a class=\"summary-card\" style=\"opacity:0.5\" href=\"#version-\(.version)\"><h3>\(.version)</h3><div class=\"counts\"><span>no data</span></div></a>"
   else
-    "<div class=\"summary-card\"><h3>\(.version)</h3><div class=\"counts\">" +
+    "<a class=\"summary-card\" href=\"#version-\(.version)\"><h3>\(.version)</h3><div class=\"counts\">" +
     "<span><span class=\"dot dot-flaking\"></span> \(.summary.known) flaking</span>" +
     "<span><span class=\"dot dot-new\"></span> \(.summary.new) new</span>" +
     "<span><span class=\"dot dot-fixed\"></span> \(.summary.fixed) fixed</span>" +
-    "</div></div>"
+    "</div></a>"
   end
 ' >> "$HTML_OUTPUT"
 echo '</div>' >> "$HTML_OUTPUT"
@@ -359,7 +360,7 @@ for v_idx in $(seq 0 $((${#VERSIONS[@]} - 1))); do
 
   if [[ "$NO_DATA" == "true" ]]; then
     cat >> "$HTML_OUTPUT" << NODATA
-<div class="version-section">
+<div class="version-section" id="version-${VERSION}">
 <div class="version-header" style="background:#95a5a6"><span>${VERSION}</span><span class="badges"><span style="background:#7f8c8d">no data</span></span></div>
 <div class="section-group"><p class="none-msg" style="color:#e74c3c;font-style:normal">&#9888; No test data found for this version. It may not exist in Sippy yet.</p></div>
 </div>
@@ -387,7 +388,7 @@ NODATA
   NEW_TABLE=$(render_table "$NEW_JSON" "row-new" "$WORKLOAD_JSON" "$VERSION")
 
   cat >> "$HTML_OUTPUT" << VERSIONSECTION
-<div class="version-section">
+<div class="version-section" id="version-${VERSION}">
 <div class="version-header"><span>${VERSION}</span><span class="badges">${BADGES}</span></div>
 <div class="section-group"><h3>Still flaking (in pending list)</h3>${KNOWN_TABLE}</div>
 <div class="section-group"><h3>New: flaking but NOT in pending list</h3>${NEW_TABLE}</div>
