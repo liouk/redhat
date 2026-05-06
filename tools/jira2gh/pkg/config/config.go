@@ -34,7 +34,7 @@ type ProjectConfig struct {
 	Jiras           []string `yaml:"jiras"`
 	IgnoreRepos     []string `yaml:"ignore_repos"`
 	IgnorePRs       []string `yaml:"ignore_prs"`
-	Authors         []string `yaml:"-"`
+	Authors         []string `yaml:"authors"`
 	SkipJira        bool     `yaml:"-"`
 }
 
