@@ -125,8 +125,33 @@ fetch_workloads() {
   local encoded_test
   encoded_test=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$test_name")
 
-  curl -s "https://sippy.dptools.openshift.org/api/tests/outputs?release=${version}&test=${encoded_test}" \
-    | jq '[.[]? | .output | split("\n")[] | select(length > 0) |
+  local response http_code
+  response=$(curl -sf -w "\n%{http_code}" "https://sippy.dptools.openshift.org/api/tests/outputs?release=${version}&test=${encoded_test}" 2>&1)
+  local curl_exit=$?
+
+  http_code=$(echo "$response" | tail -n1)
+  response=$(echo "$response" | sed '$d')
+
+  # return empty array if curl failed or response is not valid JSON
+  if [[ $curl_exit -ne 0 ]]; then
+    echo "    warning: curl failed (exit $curl_exit) for ${version}/${test_name}" >&2
+    echo "[]"
+    return
+  fi
+
+  if [[ "$http_code" != "200" ]]; then
+    echo "    warning: HTTP ${http_code} for ${version}/${test_name}" >&2
+    echo "[]"
+    return
+  fi
+
+  if ! echo "$response" | jq empty 2>/dev/null; then
+    echo "    warning: invalid JSON response for ${version}/${test_name}" >&2
+    echo "[]"
+    return
+  fi
+
+  echo "$response" | jq '[.[]? | .output | split("\n")[] | select(length > 0) |
         capture("annotation missing from pod '\''(?<pod>[^'\'']+)'\''( \\(owners: (?<owners>[^)]+)\\))?; (?<detail>.+)") |
         {owners: (.owners // .pod), detail} |
         .owners |= (split(", ") | map(
@@ -227,6 +252,7 @@ for entry in $FLAKING_NS; do
   echo "  fetching workloads for ${v}/${ns}..." >&2
   workloads=$(fetch_workloads "$v" "$test_name")
   WORKLOAD_CACHE["${v}|${ns}"]="$workloads"
+  sleep 0.1  # avoid rate limiting
 done
 
 # build a JSON object with all workload data
