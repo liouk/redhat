@@ -10,6 +10,7 @@ import (
 	"jira2gh/pkg/config"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -53,7 +54,7 @@ func (pr *PR) String() string {
 }
 
 // ExtractJiraPRs scrapes remote links from the epic's linked issues
-func ExtractJiraPRs(ctx context.Context, jira *config.JiraConfig, issueID string) (map[string]PR, error) {
+func ExtractJiraPRs(ctx context.Context, jira *config.JiraConfig, issueID string, ignoreJiras []string) (map[string]PR, error) {
 	respBody, err := jiraRequest(ctx, jira, fmt.Sprintf("rest/api/2/issue/%s", issueID))
 	if err != nil {
 		return nil, err
@@ -133,8 +134,35 @@ func ExtractJiraPRs(ctx context.Context, jira *config.JiraConfig, issueID string
 		issueEpicMap[issueID] = epic
 	}
 
+	// Expand with issue-to-issue links (e.g. "is blocked by", "relates to")
+	seen := make(map[string]bool, len(issuesToScrape))
+	for _, issue := range issuesToScrape {
+		seen[issue] = true
+	}
+	for _, issue := range issuesToScrape {
+		if slices.Contains(ignoreJiras, issue) {
+			continue
+		}
+		linkedIssues, err := getIssueLinkedIssues(ctx, jira, issue)
+		if err != nil {
+			return nil, err
+		}
+		for _, linked := range linkedIssues {
+			if !seen[linked] {
+				seen[linked] = true
+				issuesToScrape = append(issuesToScrape, linked)
+				if _, exists := issueEpicMap[linked]; !exists {
+					issueEpicMap[linked] = issueEpicMap[issue]
+				}
+			}
+		}
+	}
+
 	prs := map[string]PR{}
 	for _, issue := range issuesToScrape {
+		if slices.Contains(ignoreJiras, issue) {
+			continue
+		}
 		remoteLinks, err := getIssueRemoteLinks(ctx, jira, issue)
 		if err != nil {
 			return nil, err
@@ -203,6 +231,42 @@ func getIssueTypeAndEpic(ctx context.Context, jira *config.JiraConfig, issueID s
 	}
 
 	return issueData.Fields.IssueType.Name, issueData.Fields.ParentEpic, nil
+}
+
+func getIssueLinkedIssues(ctx context.Context, jira *config.JiraConfig, issueID string) ([]string, error) {
+	respBody, err := jiraRequest(ctx, jira, fmt.Sprintf("rest/api/2/issue/%s", issueID))
+	if err != nil {
+		return nil, err
+	}
+
+	var issueData struct {
+		Fields struct {
+			IssueLinks []struct {
+				InwardIssue *struct {
+					Key string `json:"key"`
+				} `json:"inwardIssue"`
+				OutwardIssue *struct {
+					Key string `json:"key"`
+				} `json:"outwardIssue"`
+			} `json:"issuelinks"`
+		} `json:"fields"`
+	}
+
+	if err := json.Unmarshal(respBody, &issueData); err != nil {
+		return nil, fmt.Errorf("failed to parse issue links: %w", err)
+	}
+
+	var keys []string
+	for _, link := range issueData.Fields.IssueLinks {
+		if link.InwardIssue != nil {
+			keys = append(keys, link.InwardIssue.Key)
+		}
+		if link.OutwardIssue != nil {
+			keys = append(keys, link.OutwardIssue.Key)
+		}
+	}
+
+	return keys, nil
 }
 
 func getIssueRemoteLinks(ctx context.Context, jira *config.JiraConfig, issueID string) ([]struct {

@@ -123,6 +123,7 @@ func init() {
 	rootCmd.Flags().String("github-owner", "", "GitHub owner (user or org). If not provided, will be fetched from GitHub CLI")
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
+	rootCmd.Flags().String("ignore-jiras", "", "Comma-separated list of Jira issues to ignore (e.g., OCPBUGS-123,OCPBUGS-456)")
 	rootCmd.Flags().String("authors", "", "Only sync PRs authored by these GitHub users (comma-separated)")
 	rootCmd.Flags().Bool("skip-jira", false, "Skip Jira sync, only update job summaries for PRs already in the project")
 	rootCmd.Flags().BoolP("quiet", "q", false, "Quiet mode: suppress all output, exit with 0=no new PRs, 1=new PRs found, 2=error")
@@ -194,7 +195,7 @@ func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config
 	config.Println("\nChecking Jira issues for linked PRs...")
 	jiraPRs := map[string]jira.PR{}
 	for _, id := range proj.Jiras {
-		prs, err := jira.ExtractJiraPRs(ctx, jiraCfg, id)
+		prs, err := jira.ExtractJiraPRs(ctx, jiraCfg, id, proj.IgnoreJiras)
 		if err != nil {
 			return err
 		}

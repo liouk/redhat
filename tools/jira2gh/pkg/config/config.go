@@ -34,6 +34,7 @@ type ProjectConfig struct {
 	Jiras           []string `yaml:"jiras"`
 	IgnoreRepos     []string `yaml:"ignore_repos"`
 	IgnorePRs       []string `yaml:"ignore_prs"`
+	IgnoreJiras     []string `yaml:"ignore_jiras"`
 	Authors         []string `yaml:"authors"`
 	SkipJira        bool     `yaml:"-"`
 }
@@ -81,6 +82,13 @@ func (cfg *NewConfig) CompleteFromFlags(ctx context.Context, cmd *cobra.Command,
 		}
 	}
 
+	ignoreJirasStr := cmd.Flag("ignore-jiras").Value.String()
+	if ignoreJirasStr != "" {
+		for j := range strings.SplitSeq(ignoreJirasStr, ",") {
+			proj.IgnoreJiras = append(proj.IgnoreJiras, strings.TrimSpace(j))
+		}
+	}
+
 	cfg.Projects = []*ProjectConfig{proj}
 	return nil
 }
@@ -97,14 +105,18 @@ func (cfg *NewConfig) CompleteFromFile(filename string, projectFilter string) er
 
 	// Filter projects if a project filter is specified
 	if projectFilter != "" {
+		filterSet := make(map[string]bool)
+		for p := range strings.SplitSeq(projectFilter, ",") {
+			filterSet[strings.TrimSpace(p)] = true
+		}
 		filtered := []*ProjectConfig{}
 		for _, proj := range cfg.Projects {
-			if proj.GitHubProject == projectFilter {
+			if filterSet[proj.GitHubProject] {
 				filtered = append(filtered, proj)
 			}
 		}
 		if len(filtered) == 0 {
-			return fmt.Errorf("no project found with github_project=%s", projectFilter)
+			return fmt.Errorf("no project found matching --project=%s", projectFilter)
 		}
 		cfg.Projects = filtered
 	}
