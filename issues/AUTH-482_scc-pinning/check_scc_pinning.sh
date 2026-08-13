@@ -102,7 +102,8 @@ map(. + {
 
 def sippy_link:
   (.test_name | @uri) as $test |
-  "https://sippy.dptools.openshift.org/sippy-ng/tests/\($version)/analysis?test=\($test)";
+  ({"items":[{"columnField":"name","operatorValue":"equals","value":.test_name}],"linkOperator":"and"} | tojson | @uri) as $filters |
+  "https://sippy.dptools.openshift.org/sippy-ng/tests/\($version)/analysis?test=\($test)&filters=\($filters)";
 
 {
   version: $version,
