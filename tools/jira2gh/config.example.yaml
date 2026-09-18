@@ -1,0 +1,39 @@
+jira:
+  host: "https://issues.redhat.com"
+  email: "your.name@redhat.com"
+
+# GitHub authentication is read from the GITHUB_TOKEN environment variable.
+github: {}
+
+projects:
+  - github_project: "2" # GitHub Project number
+    github_owner: "liouk"
+
+    jiras:
+      - "OCPBUGS-12345"
+      - "OCPSTRAT-6789"
+
+    ignore_repos:
+      - "openshift/ignored-repository"
+
+    ignore_prs:
+      - "openshift/origin#12345"
+      - "openshift/console#67890"
+
+    ignore_jiras:
+      - "OCPBUGS-11111"
+
+    authors:
+      - "github-user-1"
+      - "github-user-2"
+
+  - github_project: "5"
+    github_owner: "openshift"
+
+    jiras:
+      - "OCPBUGS-22222"
+
+    ignore_repos: []
+    ignore_prs: []
+    ignore_jiras: []
+    authors: []
