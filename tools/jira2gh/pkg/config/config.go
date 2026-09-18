@@ -23,9 +23,7 @@ type JiraConfig struct {
 	Token string `yaml:"-"`
 }
 
-type GitHubConfig struct {
-	Token string `yaml:"-"`
-}
+type GitHubConfig struct{}
 
 type ProjectConfig struct {
 	GitHubProject   string   `yaml:"github_project"`

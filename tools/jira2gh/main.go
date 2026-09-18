@@ -65,12 +65,6 @@ var rootCmd = &cobra.Command{
 			os.Exit(StatusCodeError)
 		}
 
-		cfg.GitHub.Token = os.Getenv("GITHUB_TOKEN")
-		if len(cfg.GitHub.Token) == 0 {
-			config.Stderr("Error: GITHUB_TOKEN environment variable is not set\n")
-			os.Exit(StatusCodeError)
-		}
-
 		var err error
 		cfgFile := cmd.Flag("config").Value.String()
 		if cfgFile == "" && len(args) == 0 {
