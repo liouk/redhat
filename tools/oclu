@@ -106,17 +106,6 @@ aws_login () {
   echo
 }
 
-# sign-in to 1password and store session
-op_signin() {
-  local op_session_file="$HOME/.config/op/.session-token"
-  OP_SESSION=$(cat $op_session_file 2>/dev/null)
-  op --session "$OP_SESSION" user list > /dev/null 2>&1 && return
-
-  OP_SESSION=$(op signin --account my --raw)
-  chmod 600 "$op_session_file"
-  echo -n "$OP_SESSION" > "$op_session_file"
-}
-
 # takes ~45min
 create_openshift_cluster () {
   local interactive_config="$1"
@@ -145,13 +134,8 @@ create_openshift_cluster () {
 
   elif [ -f "$template_file" ]; then
     local pull_secret=
-    if command -v op &> /dev/null; then
-      op_signin
-      pull_secret=$(op --session "$OP_SESSION" read "$OP_ITEM_OCP_PULL_SECRET")
-    else
-      echo -n "Pull secret:"
-      read -s pull_secret
-    fi
+    echo -n "Pull secret:"
+    read -s pull_secret
 
     cluster_path="$OCP_CLUSTER_CONFIG_DIR/$cluster_name"
     mkdir -p "$cluster_path"
@@ -187,17 +171,6 @@ create_openshift_cluster () {
   if command -v notify-send 2>&1 > /dev/null; then
     notify-send "Cluster '$cluster_name' created successfully!"
   fi
-
-  # create 1p entry with console credentials
-  echo "Will update 1p entry '$OP_ENTRY_OCP_CONSOLE' with URL and password"
-  op_signin
-  kubeadmin_password=$(cat "$cluster_path/auth/kubeadmin-password")
-  server_url=$(grep "server:" $cluster_path/auth/kubeconfig -m 1 | cut -d" " -f6)
-  web_console_url=$(grep -o "https://console-openshift-console.*.openshift.com" "$cluster_path/.openshift_install.log")
-  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" password="$kubeadmin_password" > /dev/null
-  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" website="$web_console_url" > /dev/null
-  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" cluster="$cluster_name" > /dev/null
-  op --session "$OP_SESSION" item edit "$OP_ITEM_OCP_CONSOLE" --vault "$OP_VAULT_OCP" server="$server_url" > /dev/null
 
   # use this kubeconfig
   cluster_conf="${OCP_CLUSTER_CONFIG_DIR}/${cluster_name}/auth/kubeconfig"
@@ -574,9 +547,4 @@ main () {
 [ -z "$OCP_CLUSTER_CONFIG_ARCHIVE_DIR" ] && { echo "OCP_CLUSTER_CONFIG_ARCHIVE_DIR env variable required but is not set"; exit 1; }
 [ -z "$OCP_INSTALLER_DIR" ] && { echo "OCP_INSTALLER_DIR env variable required but is not set"; exit 1; }
 [ -z "$OCP_CLUSTER_KUBECONFIG" ] && { echo "OCP_CLUSTER_KUBECONFIG env variable required but is not set"; exit 1; }
-[ -z "$OP_ITEM_OCP_PULL_SECRET" ] && { echo "OP_ITEM_OCP_PULL_SECRET env variable required but is not set"; exit 1; }
-[ -z "$OP_ITEM_OCP_CONSOLE" ] && { echo "OP_ITEM_OCP_CONSOLE env variable required but is not set"; exit 1; }
-[ -z "$OP_VAULT_OCP" ] && { echo "OP_VAULT_OCP env variable required but is not set"; exit 1; }
-[ -z "$OP_ENTRY_OCP_CONSOLE" ] && { echo "OP_ENTRY_OCP_CONSOLE env variable required but is not set"; exit 1; }
-
 main "$@"
