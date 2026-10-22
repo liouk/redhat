@@ -214,6 +214,8 @@ metadata:
 data:
   ca.crt: |
 $(echo "${CA_BUNDLE}" | sed 's/^/    /')
+  ca-bundle.crt: |
+$(echo "${CA_BUNDLE}" | sed 's/^/    /')
 EOF
   echo "CA ConfigMap created: keycloak-${NAMESPACE}-ca"
 
