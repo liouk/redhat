@@ -219,19 +219,6 @@ $(echo "${CA_BUNDLE}" | sed 's/^/    /')
 EOF
   echo "CA ConfigMap created: keycloak-${NAMESPACE}-ca"
 
-  # Create dummy client secret for console in openshift-console namespace
-  echo "Creating dummy client secret in openshift-console namespace..."
-  cat <<EOF | oc apply -n openshift-config -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: openshift-console-oidc-client-secret
-type: Opaque
-stringData:
-  clientSecret: "REPLACE_WITH_ACTUAL_CLIENT_SECRET_FROM_KEYCLOAK"
-EOF
-  echo "Dummy client secret created (needs to be updated with actual secret from Keycloak)"
-
   # Display deployment information
   echo ""
   echo "========================================="
@@ -248,8 +235,105 @@ EOF
   echo ""
 }
 
+# Create the Keycloak client used by the OpenShift console in OIDC mode.
+create_keycloak_oidc_client() {
+  echo "Creating 'console' client in Keycloak..." >&2
+
+  CONSOLE_ROUTE=$(oc get route console -n openshift-console -o jsonpath='{.status.ingress[0].host}' 2>/dev/null || true)
+  if [ -z "${CONSOLE_ROUTE}" ]; then
+    echo "Error: Could not determine the OpenShift console route" >&2
+    return 1
+  fi
+
+  REDIRECT_URI="https://${CONSOLE_ROUTE}/auth/callback"
+  CLIENT_SECRET=$(head -c 32 /dev/urandom | base64)
+
+  echo "Authenticating to Keycloak..." >&2
+  TOKEN_RESPONSE=$(curl -sk -X POST "https://${ROUTE_HOST}/realms/master/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "username=${KEYCLOAK_ADMIN}" \
+    -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+    -d "grant_type=password" \
+    -d "client_id=admin-cli")
+
+  ACCESS_TOKEN=$(echo "${TOKEN_RESPONSE}" | jq -r '.access_token // empty')
+  if [ -z "${ACCESS_TOKEN}" ]; then
+    echo "Error: Failed to get a Keycloak admin token" >&2
+    echo "Response: ${TOKEN_RESPONSE}" >&2
+    return 1
+  fi
+
+  CLIENT_DATA=$(cat <<EOF
+{
+  "clientId": "console",
+  "enabled": true,
+  "protocol": "openid-connect",
+  "publicClient": false,
+  "directAccessGrantsEnabled": false,
+  "standardFlowEnabled": true,
+  "implicitFlowEnabled": false,
+  "serviceAccountsEnabled": false,
+  "authorizationServicesEnabled": false,
+  "secret": "${CLIENT_SECRET}",
+  "redirectUris": ["${REDIRECT_URI}"],
+  "webOrigins": ["https://${CONSOLE_ROUTE}"],
+  "protocolMappers": [
+    {
+      "name": "groups",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-group-membership-mapper",
+      "consentRequired": false,
+      "config": {
+        "full.path": "false",
+        "id.token.claim": "true",
+        "access.token.claim": "false",
+        "userinfo.token.claim": "true",
+        "claim.name": "groups"
+      }
+    }
+  ]
+}
+EOF
+)
+
+  CREATE_RESPONSE=$(curl -sk -X POST "https://${ROUTE_HOST}/admin/realms/master/clients" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "${CLIENT_DATA}")
+
+  CLIENT_ID=$(curl -sk \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    "https://${ROUTE_HOST}/admin/realms/master/clients?clientId=console" |
+    jq -r '.[0].id // empty')
+  if [ -z "${CLIENT_ID}" ]; then
+    echo "Error: Failed to create the Keycloak console client" >&2
+    echo "Response: ${CREATE_RESPONSE}" >&2
+    return 1
+  fi
+
+  echo "Client 'console' created successfully" >&2
+  echo "Redirect URI: ${REDIRECT_URI}" >&2
+  echo "${CLIENT_SECRET}"
+}
+
 # Function 2: Configure OIDC Authentication
 configure_oidc() {
+  if ! OIDC_CLIENT_SECRET=$(create_keycloak_oidc_client); then
+    echo "Failed to create the Keycloak console client; not generating an incomplete OIDC configuration."
+    return 1
+  fi
+
+  echo "Creating console OIDC client Secret in openshift-config namespace..."
+  cat <<EOF | oc apply -n openshift-config -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openshift-console-oidc-client-secret
+type: Opaque
+stringData:
+  clientSecret: "${OIDC_CLIENT_SECRET}"
+EOF
+
   # Generate the Authentication manifest
   AUTH_MANIFEST="/tmp/authentication-oidc-${NAMESPACE}.yaml"
 
@@ -269,7 +353,7 @@ spec:
     issuer:
       issuerURL: "https://${ROUTE_HOST}/realms/master"
       audiences:
-      - openshift-aud
+      - console
       - admin-cli
       issuerCertificateAuthority:
         name: keycloak-${NAMESPACE}-ca
@@ -281,7 +365,7 @@ spec:
         name: openshift-console-oidc-client-secret
     claimMappings:
       username:
-        claim: "email"
+        claim: "preferred_username"
         prefixPolicy: "Prefix"
         prefix:
           prefixString: "keycloak:"
@@ -307,20 +391,13 @@ EOF
     echo "Monitor rollout by running"
     echo "  watch 'oc get kubeapiserver cluster -ojsonpath=\"{.status.nodeStatuses}\"|jq'"
     echo ""
-    echo "IMPORTANT: Before this configuration will work, you need to:"
-    echo "1. Create a client named 'console' in Keycloak with appropriate redirect URIs"
-    echo "2. Update the Secret 'openshift-console-oidc-client-secret' in openshift-console namespace"
-    echo "   with the actual client secret from Keycloak:"
-    echo "   oc patch secret openshift-console-oidc-client-secret -n openshift-console \\"
-    echo "     --type merge -p '{\"stringData\":{\"clientSecret\":\"YOUR_ACTUAL_SECRET\"}}'"
-    echo ""
-    echo "Note: The CA ConfigMap and a dummy client Secret have already been created"
+    echo "OIDC configuration is ready to use."
+    echo "The 'console' client has been created in Keycloak and its Secret has been configured."
   else
     echo "Manifest saved but not applied. You can apply it later with:"
     echo "  oc apply -f ${AUTH_MANIFEST}"
     echo ""
-    echo "Note: The CA ConfigMap and a dummy client Secret have already been created"
-    echo "      You'll need to create the console client in Keycloak and update the Secret"
+    echo "The CA ConfigMap, Keycloak console client, and client Secret have already been created."
   fi
 }
 
@@ -339,7 +416,7 @@ create_keycloak_oauth_client() {
   REDIRECT_URI="https://${OAUTH_ROUTE}/oauth2callback/keycloak-${NAMESPACE}"
 
   # Generate a client secret
-  CLIENT_SECRET=$(openssl rand -base64 32)
+  CLIENT_SECRET=$(head -c 32 /dev/urandom | base64)
 
   # Get admin access token
   echo "Authenticating to Keycloak..." >&2
