@@ -134,16 +134,37 @@ create_openshift_cluster () {
 
   elif [ -f "$template_file" ]; then
     local pull_secret=
-    echo -n "Pull secret:"
-    read -s pull_secret
+    echo "Get your pull secret from:"
+    echo "https://console.redhat.com/openshift/downloads#tool-pull-secret"
+    if ! IFS= read -r -s -p "Pull secret: " pull_secret; then
+      echo >&2
+      echo "Error: could not read the pull secret from the terminal" >&2
+      exit 1
+    fi
+    echo
+    [ -z "$pull_secret" ] && { echo "Error: pull secret cannot be empty" >&2; exit 1; }
 
     cluster_path="$OCP_CLUSTER_CONFIG_DIR/$cluster_name"
     mkdir -p "$cluster_path"
 
     local config_file="$cluster_path/install-config.yaml"
+    local config_tmp="${config_file}.tmp"
+    local pull_secret_replaced=
     cp "$template_file" "$config_file"
     sed -i "s/name: \$CLUSTER_NAME$/name: $cluster_name/" "$config_file"
-    sed -i "s/pullSecret: \$PULL_SECRET$/pullSecret: '$pull_secret'/" "$config_file"
+    while IFS= read -r line || [ -n "$line" ]; do
+      if [ "$line" = 'pullSecret: $PULL_SECRET' ]; then
+        printf "pullSecret: '%s'\n" "$pull_secret"
+        pull_secret_replaced=1
+      else
+        printf '%s\n' "$line"
+      fi
+    done < "$config_file" > "$config_tmp"
+    if [ -z "$pull_secret_replaced" ]; then
+      echo "Error: pull secret placeholder not found in '$template_file'" >&2
+      exit 1
+    fi
+    mv "$config_tmp" "$config_file"
 
   else
     echo "Error: no template found for $platform/$ocp_version; run script interactively to create one"
@@ -186,13 +207,19 @@ load_cluster_configs () {
   # clusterbot configs
   clusterbot_configs_dir="$HOME/Downloads"
   clusterbot_config_regex=".*kubeconfig.*"
-  configs=( $(find "$clusterbot_configs_dir" -regex "$clusterbot_config_regex" 2>/dev/null) )
+  configs=()
+  if [ -d "$clusterbot_configs_dir" ]; then
+    configs=( $(find "$clusterbot_configs_dir" -regex "$clusterbot_config_regex") )
+  fi
   for c in "${configs[@]}"; do
     [[ -z "${c// }" ]] || all_configs+=($c)
   done
 
   # openshift-install configs
-  configs=( $(find "$OCP_CLUSTER_CONFIG_DIR" -mindepth 1 -maxdepth 1 \( -name "archive" -o -name "templates" \) -prune -o -print 2>/dev/null) )
+  configs=()
+  if [ -d "$OCP_CLUSTER_CONFIG_DIR" ]; then
+    configs=( $(find "$OCP_CLUSTER_CONFIG_DIR" -mindepth 1 -maxdepth 1 \( -name "archive" -o -name "templates" \) -prune -o -print) )
+  fi
   for c in "${configs[@]}"; do
     [[ -z "${c// }" ]] || all_configs+=($c)
   done
@@ -393,7 +420,10 @@ cmd_config () {
     -d|--delete)
       # delete config files instead of choosing one
       echo "Cluster config to remove:"
-      selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
+      if ! selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10); then
+        echo "No selection, bye"
+        exit 1
+      fi
       if [[ "$selected" == "" ]]; then
         echo "No selection, bye"
         exit 1
@@ -421,7 +451,10 @@ cmd_config () {
   echo "KUBECONFIG=$KUBECONFIG"
   echo
   echo "Choose a cluster config:"
-  selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10)
+  if ! selected=$(printf "%s\n" "${all_configs[@]}" | fzf --height=~10); then
+    echo "No selection, bye"
+    exit 1
+  fi
   if [[ "$selected" == "" ]]; then
     echo "No selection, bye"
     exit 1
