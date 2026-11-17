@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This helper only performs project operations.
+if [ -n "${JIRA2GH_GH_TOKEN:-}" ]; then export GH_TOKEN="$JIRA2GH_GH_TOKEN"; fi
+
 FIELD="$1"
 VALUE="$2"
 

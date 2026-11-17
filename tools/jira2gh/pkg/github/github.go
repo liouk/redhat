@@ -17,7 +17,7 @@ var (
 
 func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string]jira.PR, error) {
 	// Run gh CLI to fetch project items
-	cmd := exec.CommandContext(ctx, "gh", "project", "item-list", proj.GitHubProject, "--owner", proj.GitHubOwner, "--format", "json", "--limit", "1000")
+	cmd := projectCommand(ctx, "item-list", proj.GitHubProject, "--owner", proj.GitHubOwner, "--format", "json", "--limit", "1000")
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -118,7 +118,7 @@ func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []ji
 			continue
 		}
 
-		_, err := exec.CommandContext(ctx, "gh", "project",
+		_, err := projectCommand(ctx,
 			"item-delete", proj.GitHubProject,
 			"--owner", proj.GitHubOwner,
 			"--id", pr.ItemID,
@@ -309,7 +309,7 @@ func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, me
 		return nil
 	}
 
-	out, err := exec.CommandContext(ctx, "gh", "project",
+	out, err := projectCommand(ctx,
 		"item-add", proj.GitHubProject,
 		"--owner", proj.GitHubOwner,
 		"--url", prURL,
@@ -360,7 +360,7 @@ func ghGetProjectID(ctx context.Context, proj *config.ProjectConfig) (string, er
 		ID string `json:"id"`
 	}
 
-	out, err := exec.CommandContext(ctx, "gh", "project",
+	out, err := projectCommand(ctx,
 		"view", proj.GitHubProject,
 		"--owner", proj.GitHubOwner,
 		"--format", "json",
@@ -380,7 +380,7 @@ func ghGetProjectID(ctx context.Context, proj *config.ProjectConfig) (string, er
 // ghGetFieldID retrieves the field ID for a given field name from the GitHub project
 func ghGetFieldID(ctx context.Context, proj *config.ProjectConfig, fieldName string) (string, error) {
 	// Run gh CLI to fetch project fields
-	cmd := exec.CommandContext(ctx, "gh", "project",
+	cmd := projectCommand(ctx,
 		"field-list", proj.GitHubProject,
 		"--owner", proj.GitHubOwner,
 		"--format", "json",
@@ -429,13 +429,12 @@ func ghItemEdit(ctx context.Context, projectID, itemID, fieldType, fieldID, valu
 		return fmt.Errorf("unknown field type: %s", fieldType)
 	}
 
-	_, err := exec.
-		CommandContext(ctx, "gh", "project", "item-edit",
-			"--project-id", projectID,
-			"--id", itemID,
-			"--field-id", fieldID,
-			valueArg, value,
-		).CombinedOutput()
+	_, err := projectCommand(ctx, "item-edit",
+		"--project-id", projectID,
+		"--id", itemID,
+		"--field-id", fieldID,
+		valueArg, value,
+	).CombinedOutput()
 
 	return err
 }

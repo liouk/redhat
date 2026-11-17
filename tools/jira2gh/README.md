@@ -5,28 +5,28 @@ fields with PR metadata.
 
 ## GitHub authentication
 
-`jira2gh` uses the GitHub CLI for all GitHub operations. Authenticate `gh`
-once with a personal access token; the token is stored by `gh` and does not
-need to be exported globally:
+`jira2gh` uses the GitHub CLI for all GitHub operations. Repository/PR details
+and checks use normal `gh` authentication (`GH_TOKEN`, then `GITHUB_TOKEN`, then
+stored credentials). Project operations use `JIRA2GH_GH_TOKEN` when nonempty,
+otherwise the same normal authentication. The override is passed only to the
+project's `gh` subprocess; it does not replace the process-wide token.
+`assign_field.sh` also honors `JIRA2GH_GH_TOKEN`.
+
+For public repositories and a personal project, keep public read access separate
+from project writes:
 
 ```bash
-printf 'GitHub PAT: ' >&2
-IFS= read -r -s GH_PAT
-printf '\n' >&2
-printf '%s' "$GH_PAT" | gh auth login --hostname github.com --with-token
-unset GH_PAT
+export GH_TOKEN="fine-grained-token-with-public-read-access"
+export GH_PROJECT_TOKEN="classic-token-with-only-project-scope"
+export JIRA2GH_GH_TOKEN="$GH_PROJECT_TOKEN"
 ```
 
-For a classic personal access token, grant the `project` scope, plus `repo`
-and `read:org` if the project contains private or organization repositories.
-Verify the stored credentials with:
-
-```bash
-env -u GH_TOKEN -u GITHUB_TOKEN gh auth status
-```
-
-Avoid exporting an unrelated `GH_TOKEN` or `GITHUB_TOKEN`: `gh` gives those
-environment variables precedence over its stored credentials.
+`GH_PROJECT_TOKEN` is a shell convenience; the tool reads `JIRA2GH_GH_TOKEN`.
+An unset or empty override preserves existing `gh` authentication. Fine-grained
+PATs currently cannot access user-owned Projects. These commands do not modify
+PRs or repository contents. Project CLI commands may also resolve PR metadata
+internally; project-only token compatibility still needs verification against
+GitHub. The override does not change the token used by those internal requests.
 
 ## Install
 
@@ -44,8 +44,7 @@ By default, `jira2gh` reads:
 ~/.config/jira2gh/config.yaml
 ```
 
-It still requires `JIRA_API_TOKEN` for Jira access. GitHub authentication is
-handled by `gh` as described above.
+It still requires `JIRA_API_TOKEN` for Jira access. GitHub authentication follows the token selection described above.
 
 ```bash
 export JIRA_API_TOKEN='your-jira-token'
