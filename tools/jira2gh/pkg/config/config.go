@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -28,13 +27,21 @@ type GitHubConfig struct{}
 type ProjectConfig struct {
 	GitHubProject   string   `yaml:"github_project"`
 	GitHubProjectID string   `yaml:"-"`
-	GitHubOwner     string   `yaml:"github_owner"`
+	GitHubOwner     string   `yaml:"github_owner,omitempty"`
 	Jiras           []string `yaml:"jiras"`
 	IgnoreRepos     []string `yaml:"ignore_repos"`
 	IgnorePRs       []string `yaml:"ignore_prs"`
 	IgnoreJiras     []string `yaml:"ignore_jiras"`
 	Authors         []string `yaml:"authors"`
 	SkipJira        bool     `yaml:"-"`
+}
+
+// Owner defaults to the user authenticated by the project token.
+func (p *ProjectConfig) Owner() string {
+	if owner := strings.TrimSpace(p.GitHubOwner); owner != "" {
+		return owner
+	}
+	return "@me"
 }
 
 type GitHubFieldValue struct {
@@ -44,25 +51,15 @@ type GitHubFieldValue struct {
 	ValueID string `yaml:"-"`
 }
 
-func (cfg *NewConfig) CompleteFromFlags(ctx context.Context, cmd *cobra.Command, jiras []string) error {
+func (cfg *NewConfig) CompleteFromFlags(_ context.Context, cmd *cobra.Command, jiras []string) error {
 	if len(jiras) == 0 {
 		return fmt.Errorf("no jiras provided")
-	}
-
-	// Get GitHub owner from flag or GitHub CLI
-	githubOwner := cmd.Flag("github-owner").Value.String()
-	if len(githubOwner) == 0 {
-		// Try to get owner from GitHub CLI
-		var err error
-		githubOwner, err = getGitHubOwner(ctx)
-		if err != nil {
-			return fmt.Errorf("Failed to determine GitHub owner. Please provide --github-owner flag or ensure GitHub CLI is configured: %v", err)
-		}
 	}
 
 	cfg.Jira.Host = cmd.Flag("jira-host").Value.String()
 	proj := &ProjectConfig{
 		GitHubProject: cmd.Flag("github-project-id").Value.String(),
+		GitHubOwner:   cmd.Flag("github-owner").Value.String(),
 		Jiras:         jiras,
 	}
 
@@ -120,20 +117,4 @@ func (cfg *NewConfig) CompleteFromFile(filename string, projectFilter string) er
 	}
 
 	return nil
-}
-
-// getGitHubOwner retrieves the GitHub owner from the GitHub CLI
-func getGitHubOwner(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, "gh", "api", "user", "--jq", ".login")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get GitHub user from gh CLI: %w", err)
-	}
-
-	owner := strings.TrimSpace(string(output))
-	if owner == "" {
-		return "", fmt.Errorf("GitHub CLI returned empty owner")
-	}
-
-	return owner, nil
 }

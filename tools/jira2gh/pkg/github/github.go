@@ -17,7 +17,7 @@ var (
 
 func FetchGitHubPRs(ctx context.Context, proj *config.ProjectConfig) (map[string]jira.PR, error) {
 	// Run gh CLI to fetch project items
-	cmd := projectCommand(ctx, "item-list", proj.GitHubProject, "--owner", proj.GitHubOwner, "--format", "json", "--limit", "1000")
+	cmd := projectCommand(ctx, "item-list", proj.GitHubProject, "--owner", proj.Owner(), "--format", "json", "--limit", "1000")
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -82,7 +82,7 @@ func AddToProject(ctx context.Context, proj *config.ProjectConfig, prs []jira.PR
 	if len(prs) == 1 {
 		prWord = "PR"
 	}
-	config.Printf("\nSyncing %s to project %s/%s...\n", prWord, proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("\nSyncing %s to project %s/%s...\n", prWord, proj.Owner(), proj.GitHubProject)
 
 	projID, err := ghGetProjectID(ctx, proj)
 	if err != nil {
@@ -109,7 +109,7 @@ func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []ji
 	if len(prs) == 1 {
 		prWord = "PR"
 	}
-	config.Printf("\nRemoving %s from project %s/%s...\n", prWord, proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("\nRemoving %s from project %s/%s...\n", prWord, proj.Owner(), proj.GitHubProject)
 
 	for _, pr := range prs {
 		shortPR := FormatPRShort(pr.URL)
@@ -120,7 +120,7 @@ func RemoveFromProject(ctx context.Context, proj *config.ProjectConfig, prs []ji
 
 		_, err := projectCommand(ctx,
 			"item-delete", proj.GitHubProject,
-			"--owner", proj.GitHubOwner,
+			"--owner", proj.Owner(),
 			"--id", pr.ItemID,
 		).CombinedOutput()
 
@@ -311,7 +311,7 @@ func ghItemAdd(ctx context.Context, proj *config.ProjectConfig, prURL string, me
 
 	out, err := projectCommand(ctx,
 		"item-add", proj.GitHubProject,
-		"--owner", proj.GitHubOwner,
+		"--owner", proj.Owner(),
 		"--url", prURL,
 		"--format", "json",
 	).CombinedOutput()
@@ -362,7 +362,7 @@ func ghGetProjectID(ctx context.Context, proj *config.ProjectConfig) (string, er
 
 	out, err := projectCommand(ctx,
 		"view", proj.GitHubProject,
-		"--owner", proj.GitHubOwner,
+		"--owner", proj.Owner(),
 		"--format", "json",
 	).CombinedOutput()
 	if err != nil {
@@ -382,7 +382,7 @@ func ghGetFieldID(ctx context.Context, proj *config.ProjectConfig, fieldName str
 	// Run gh CLI to fetch project fields
 	cmd := projectCommand(ctx,
 		"field-list", proj.GitHubProject,
-		"--owner", proj.GitHubOwner,
+		"--owner", proj.Owner(),
 		"--format", "json",
 	)
 	output, err := cmd.Output()

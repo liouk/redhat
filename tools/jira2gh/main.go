@@ -114,7 +114,7 @@ func init() {
 	rootCmd.Flags().String("project", "", "when using --config, filter to only run for the project with this github_project value")
 	rootCmd.Flags().String("jira-host", "", "Jira host URL (e.g., https://issues.redhat.com)")
 	rootCmd.Flags().String("github-project-id", "", "Self-explanatory")
-	rootCmd.Flags().String("github-owner", "", "GitHub owner (user or org). If not provided, will be fetched from GitHub CLI")
+	rootCmd.Flags().String("github-owner", "@me", "GitHub owner (user or org; defaults to the user authenticated by the project token)")
 	rootCmd.Flags().String("ignore-repos", "", "Comma-separated list of repositories to ignore (e.g., owner/repo1,owner/repo2)")
 	rootCmd.Flags().String("ignore-prs", "", "Comma-separated list of PRs to ignore (e.g., owner/repo#123,owner/repo#456)")
 	rootCmd.Flags().String("ignore-jiras", "", "Comma-separated list of Jira issues to ignore (e.g., OCPBUGS-123,OCPBUGS-456)")
@@ -144,7 +144,7 @@ func run(ctx context.Context, cfg *config.NewConfig) error {
 }
 
 func runForProject(ctx context.Context, jiraCfg *config.JiraConfig, proj *config.ProjectConfig) error {
-	config.Printf("Fetching PRs from GitHub Project %s/%s...\n", proj.GitHubOwner, proj.GitHubProject)
+	config.Printf("Fetching PRs from GitHub Project %s/%s...\n", proj.Owner(), proj.GitHubProject)
 	githubPRs, err := github.FetchGitHubPRs(ctx, proj)
 	if err != nil {
 		return err

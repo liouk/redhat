@@ -17,16 +17,16 @@ from project writes:
 
 ```bash
 export GH_TOKEN="fine-grained-token-with-public-read-access"
-export GH_PROJECT_TOKEN="classic-token-with-only-project-scope"
+export GH_PROJECT_TOKEN="classic-token-with-project-and-required-read-scopes"
 export JIRA2GH_GH_TOKEN="$GH_PROJECT_TOKEN"
 ```
 
 `GH_PROJECT_TOKEN` is a shell convenience; the tool reads `JIRA2GH_GH_TOKEN`.
 An unset or empty override preserves existing `gh` authentication. Fine-grained
 PATs currently cannot access user-owned Projects. These commands do not modify
-PRs or repository contents. Project CLI commands may also resolve PR metadata
-internally; project-only token compatibility still needs verification against
-GitHub. The override does not change the token used by those internal requests.
+PRs or repository contents. With the current GitHub CLI, project item queries
+require `project`, `read:org`, and `read:discussion` on the classic token.
+`repo` and `public_repo` are not needed for the read queries verified here.
 
 ## Install
 
@@ -43,6 +43,20 @@ By default, `jira2gh` reads:
 ```text
 ~/.config/jira2gh/config.yaml
 ```
+
+For projects under your own account, omit `github_owner`:
+
+```yaml
+projects:
+  - github_project: "8"
+    jiras:
+      - EXAMPLE-123
+```
+
+Project operations default to `--owner @me`, which uses the user authenticated
+by the project token. For another user or an organization, set the optional
+`github_owner` on that project. Without a config file, `--github-owner` provides
+the same override and defaults to `@me`.
 
 It still requires `JIRA_API_TOKEN` for Jira access. GitHub authentication follows the token selection described above.
 

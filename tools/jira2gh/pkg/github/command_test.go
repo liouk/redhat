@@ -95,3 +95,36 @@ esac
 		})
 	}
 }
+
+func TestFetchProjectOwner(t *testing.T) {
+	bin := t.TempDir()
+	script := `#!/bin/sh
+printf '%s\n' "$@" > "$ARGS_LOG"
+printf '%s\n' '{"items":[]}'
+`
+	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	for _, owner := range []string{"", "@me", "example-org"} {
+		t.Run(owner, func(t *testing.T) {
+			log := filepath.Join(t.TempDir(), "args")
+			t.Setenv("ARGS_LOG", log)
+			proj := &config.ProjectConfig{GitHubProject: "8", GitHubOwner: owner}
+			if _, err := FetchGitHubPRs(context.Background(), proj); err != nil {
+				t.Fatal(err)
+			}
+			contents, err := os.ReadFile(log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := owner
+			if want == "" {
+				want = "@me"
+			}
+			if !strings.Contains(string(contents), "--owner\n"+want+"\n") {
+				t.Fatalf("unexpected gh args: %s", contents)
+			}
+		})
+	}
+}

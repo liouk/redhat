@@ -13,7 +13,7 @@ if [ -z "$FIELD" ] || [ -z "$VALUE" ]; then
 fi
 
 PROJECT_NUMBER=2
-OWNER="liouk"
+OWNER="@me"
 PROJECT_ID=$(gh project view $PROJECT_NUMBER --owner $OWNER --format json | jq -r '.id')
 
 FIELD_ID=$(gh project field-list $PROJECT_NUMBER --owner $OWNER --format json | jq -r '.fields[] | select(.name=="'"$FIELD"'") | .id')
