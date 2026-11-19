@@ -1,34 +1,59 @@
 #!/usr/bin/env bash
 
-set -e
+set -eo pipefail
 
-main () {
+main () (
   local suffix="${1:-}"
   [ -n "$suffix" ] && suffix="-$suffix" || suffix="-$(git rev-parse --short HEAD)"
 
-  local tag=$(git branch --show-current)
+  local tag
+  tag=$(git branch --show-current)
   tag=${tag:=latest}
   tag="$tag$suffix"
 
-  local output=$(make images | tee /dev/tty)
-  local img_orig=$(echo "$output" | grep -o "Committing changes to .* ..." | cut -d' ' -f4)
-  local repo=$(echo "$img_orig" | cut -d':' -f2)
+  local image_id_file
+  image_id_file=$(mktemp /tmp/mkimg.XXXXXX)
+  trap 'rm -f -- "$image_id_file"' EXIT
+
+  # A unique local registry prefix identifies this build's tag, even if the
+  # image already has other tags. Read the image ID instead of parsing build logs.
+  local build_registry="localhost/mkimg-$$"
+  make images \
+    IMAGE_BUILD_BUILDER='podman build' \
+    IMAGE_BUILD_DEFAULT_FLAGS= \
+    IMAGE_REGISTRY="$build_registry" \
+    IMAGE_BUILD_EXTRA_FLAGS="${IMAGE_BUILD_EXTRA_FLAGS:-} --iidfile $image_id_file"
+
+  local image_id img_orig repo
+  image_id=$(<"$image_id_file")
+  if [ -z "$image_id" ]; then
+    echo "Build did not produce an image ID" >&2
+    return 1
+  fi
+  img_orig=$(podman image inspect "$image_id" \
+    --format '{{range .RepoTags}}{{println .}}{{end}}' |
+    awk -v prefix="$build_registry/" 'index($0, prefix) == 1')
+  if [[ -z "$img_orig" || "$img_orig" == *$'\n'* ]]; then
+    echo "Expected exactly one local tag for the built image" >&2
+    return 1
+  fi
+  repo="${img_orig##*:}"
 
   local img_new="$OCP_REGISTRY/$repo:$tag"
 
   # rename to quay.io registry
   echo
-  docker image tag "$img_orig" "$img_new"
+  podman image tag "$img_orig" "$img_new"
   echo "Tagged: $img_new"
-  docker rmi "$img_orig"
+  podman rmi "$img_orig"
   echo
 
   read -p "Push image '$img_new'? [yN] " yn
   case $yn in
-    y|yes) echo && docker push "$img_new";;
+    y|yes) echo && podman push "$img_new";;
     *) ;;
   esac
-}
+)
 
 [ -z "$OCP_REGISTRY" ] && { echo "OCP_REGISTRY env variable required but is not set"; exit 1; }
 
